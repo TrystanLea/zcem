@@ -1,6 +1,6 @@
 # A series of example models exploring hourly demand and supply for renewable powered domestic electricity, heating with heatpumps and electric vehicles
 
-[Launch online tool: http://openenergymonitor.org/energymodel](http://openenergymonitor.org/energymodel)
+### [Launch online tool: http://openenergymonitor.org/energymodel](http://openenergymonitor.org/energymodel)
 
 ![intro.png](img/model.png)
 
