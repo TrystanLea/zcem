@@ -1,0 +1,56 @@
+<h2>Variable supply and electric vehicles</h2>
+
+View:
+<button id="pan-left"><</button>
+<button id="pan-right">></button>
+<button id="zoom-out">-</button>
+<button id="zoom-in">+</button>
+<button id="reset">reset</button>
+
+<div id="placeholder_bound" style="width:100%; height:500px;">
+    <div id="placeholder"></div>
+</div>
+
+<table class="table">
+<tr>
+    <td>Supply:</td>
+    <td>
+    <select class="modelinput" key="gen_type" autocomplete="off">
+        <option value=0 selected="selected">Onshore wind</option>
+        <option value=1>Offshore wind</option>
+        <option value=2>Wave power</option>
+        <option value=3>Tidal power</option>
+        <option value=4>Solar power</option>
+    </select>
+    </td>
+</tr>
+<tr>
+    <td>Gen capacity (kW):</td>
+    <td><input class="modelinput" key="gen_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+<tr>
+    <td>Electric car performance (miles per kwh):</td>
+    <td><input class="modelinput" key="EV_miles_per_kwh" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+
+<tr>
+    <td>Electric car battery capacity  (kWh):</td>
+    <td><input class="modelinput" key="EV_battery_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+<tr>
+    <td>Electric car charge type:</td>
+    <td>
+    <select class="modelinput" key="charge_type" autocomplete="off">
+        <option value="constantcharge">Constant charge</option>
+        <option value="nightcharge">Night charge only</option>
+        <option value="morenight">More in the night</option>
+        <option value="moreday">More in the day</option>
+        <option value="smartcharge">Smart charge</option>
+    </select>
+    </td>
+</tr>
+</table>
+
+<pre id="out" style="font-size:16px; line-height:28px"></pre>
+
+<button class="view-source">View source code</button>

@@ -1,0 +1,57 @@
+<h2>Complementarity of different renewable generating technologies</h2>
+
+<p>We hear a lot that a renewable energy system benefits from having a mix of generating technologies. Combining wind and solar for example is said to provide a higher supply/demand matching than relying on one technology alone. When the wind isn’t blowing it may be sunny or vice versa.</p>
+
+<p>How do we work out the best mix of different renewable generating technologies. When is it cheaper to add more wind than to add more solar, what is the balance point for a particular demand profile?</p>
+
+<p>This example explore's the balance point for onshore wind + solar, both having large resource availabilities associated with them. The mix will be balanced based on energy cost. It would also be good to explore the balance based on embodied energy. As with all modelling based on costs the outcome will change as costs change, the important thing here is to understand the method so that we can explore for a given set of costs what the optimum mix might be.</p>
+
+<p>In the recent contracts for a difference auction in the UK for renewable generation many of the onshore wind farms received a strike price of £82.50 per MWh. Two offshore wind projects received £115 per MWh and three solar farms received £79.23 per MWh.</p>
+
+<p>Source: <a href="https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/407059/Contracts_for_Difference_-_Auction_Results_-_Official_Statistics.pdf">Contracts for Difference Auction Results</a></p>
+
+<p>In this example we will use these cost figures, the ZCB capacity dataset for onshore wind and solar and a simple flat demand profile.</p>
+
+<p>If we look at the results from example 2 investigating annual matching for wind and solar and add in the cost information:</p>
+
+<p>1.164kW of onshore wind delivers 3300 kWh/y at £272/y and a supply/demand matching of 65.88%.</p>
+
+<p>3.99kW of solar delivers 3300 kWh/y at £261/y and a supply/demand matching of 40.61%.</p>
+
+<p>One way to investigate the best mix is to fix the total annual energy cost and change the installed capacities of both solar and wind to achieve the greatest level of matching for a given energy cost.</p>
+
+<p>So lets take an annual energy cost of £272 and work out for this cost what is the maximum level of matching we can obtain from a wind + solar mix.</p>
+
+<table class="table">
+<tr><th>Cost</th><th>Wind capacity</th><th>Solar capacity</th><th>Matching</th></tr>
+<tr><td>£272.02</td><td>1.1635</td><td>0</td><td>65.86 %</td></tr>
+<tr><td>£272.03</td><td>1.0235</td><td>0.5</td><td>70.04 %</td></tr>
+<tr><td>£272.03</td><td>0.9395</td><td>0.8</td><td>71.22 %</td></tr>
+<tr><td>£272.03</td><td>0.9115</td><td>0.9</td><td>71.33%</td></tr>
+<tr><td>£272.04</td><td>0.8975</td><td>0.95</td><td>71.35%</td></tr>
+<tr><td>£272.04</td><td>0.8835</td><td>1.0</td><td>71.34 %</td></tr>
+<tr><td>£272.04</td><td>0.8695</td><td>1.05</td><td>71.31 %</td></tr>
+<tr><td>£272.04</td><td>0.8555</td><td>1.1</td><td>71.26 %</td></tr>
+<tr><td>£272.04</td><td>0.8275</td><td>1.2</td><td>71.09%</td></tr>
+</table>
+
+<p>At an energy cost of £272/year a flat demand and the ZCB dataset we can see a clear benefit from combining solar and wind in the energy mix, increasing solar pv capacity appears to make sense up to 105.8% of installed wind capacity after which the matching starts to drop again for the given energy cost.</p>
+
+<p>How does the mix change if we decide to oversupply and pay a higher cost for the electricity. If we fix our annual cost to say £320</p>
+
+<table class="table">
+<tr><th>Cost</th><th>Wind capacity</th><th>Solar capacity</th><th>Matching</th></tr>
+<tr><td>£320.06</td><td>1.369</td><td>0</td></td><td>69.88 %</td></tr>
+<tr><td>£320.07</td><td>1.229</td><td>0.5</td><td>73.98 %</td></tr>
+<tr><td>£320.08</td><td>1.144</td><td>0.8</td><td>75.20 %</td></tr>
+<tr><td>£320.08</td><td>1.089</td><td>1.0</td><td>75.44 %</td></tr>
+<tr><td>£320.08</td><td>1.075</td><td>1.05</td><td>75.45 %</td></tr>
+<tr><td>£320.08</td><td>1.061</td><td>1.1</td><td>75.44 %</td></tr>
+<tr><td>£320.08</td><td>1.047</td><td>1.15</td><td>75.41 %</td></tr>
+<tr><td>£320.08</td><td>1.033</td><td>1.2</td><td>75.37 %</td></tr>
+</table>
+
+<p>The maximum matching we obtained in this case happened where solar capacity was 97.7% of wind capacity.</p>
+
+<p>It appears that in these model runs, the optimal mix between solar and wind is to install an equal capacity of both, its interesting that this happens to be the case and that its not say half the wind capacity. The model results confirm the often discussed complementarity between solar and wind supply and that the benefit of their combination increases supply demand matching by around 5% points for no additional cost and is a similar scale of supply/demand matching improvement seen by increasing the oversupply of wind to 120% of demand but without the additional cost.</p>
+

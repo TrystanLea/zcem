@@ -1,0 +1,33 @@
+<br><br>
+<p>This second example model's the degree of supply/demand matching between a variable renewable supply consisting of a single renewable energy generation type and a flat electricity demand profile.
+
+<p>In this model the demand is subtracted from the supply for every hour in the 10 year period and the total amount of unmet demand and excess generation is measured as well as the amount of time the supply was more than or equal to the demand.
+
+<p>The demand level has been set to an annual average electricity demand of 3300 kWh which is the average UK household annual electricity consumption. The amount of installed capacity is set to match this demand on the 10 year basis of the dataset.</p>
+
+<p>Running the model for each of each generation type, matching total 10 year supply to total 10 year demand of 3300 kWh x 10 we get the following results:</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>1.17kW</td><td>0.79kW</td><td>1.33kW</td><td>1.58kW</td><td>3.98kW</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>65.9%</td><td>76.4%</td><td>73.9%</td><td>57.7%</td><td>40.6%</td>
+     </tr>
+    <tr>
+        <td>Percentage of time demand is<br>more or the same as the supply</td>
+        <td>40.1%</td><td>46.2%</td><td>45.3%</td><td>38.6%</td><td>32.1%</td>
+     </tr>
+</table>
+
+<p>We can see again here that offshore wind is the clear winner with the lowest installed capacity requirement and highest level of supply/demand matching. Perhaps an interesting result is how less predictable technologies such as wind and wave provide greater levels of matching than power from tidal which is very predictable.</p>

@@ -1,0 +1,95 @@
+<br><br>
+
+<p>The example here starts by integrating electric vehicles with a simple night time charge profile. The second example then explores more constant charge profile throughout the day – this constant charge profile could be the result of a large number of electric cars all charging at different times, some at work, others at home over night. The third example will explore a basic smart charging approach where the charge rate can aligned with the availability of renewable energy. There are many people who are already choosing their charge times to align with domestic solar pv output and there is much discussion about the opportunity that this may provide for matching supply and demand.</p>
+
+<h3>Night time charging</h3>
+
+<p>The first model investigates night time charging between 1am and 8am (7 hours). The charge profile of an aggregation of electric vehicels is much more likely to be smoother than this with a distribution over the day especially as the number of work based charging facilities and rapid chargers increase but for interest we will consider this case.</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>0.8699</td><td>0.5864</td><td>0.9931</td><td>1.1783</td><td>2.9825</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>27%</td><td>28%</td><td>29%</td><td>28%</td><td>3%</td>
+     </tr>
+</table>
+
+<h3>Flat charging profile</h3>
+
+<p>The results of running the model for a flat demand profile is the same as the earlier example where we considered the degree of matching between supply and a flat demand. Substantial improvements in matching compared to the the night time charging profile is gained by just managing to distribute the charging requirements eavenly across a day. This is unlikely to be possible on a single household basis but perhaps possible when the aggregate demand of many hundred cars are taken into account with day time charging at work encouraged.</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>0.8699</td><td>0.5864</td><td>0.9931</td><td>1.1783</td><td>2.9825</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>65%</td><td>76%</td><td>74%</td><td>57%</td><td>40%</td>
+    </tr>
+    <tr>
+        <td>Percentage of time demand is<br>more or the same as the supply</td>
+        <td>40%</td><td>46%</td><td>45%</td><td>38%</td><td>32%</td>
+    </tr>
+</table>
+
+<h3>Smart charging (variable rate charger that matches available supply)</h3>
+
+<p>Smart charging could allow electric vehicles that are left connected to the grid to charge when renewable electricity is available. The simple smart charging algorithm in this example starts by using available supply to charge the car's battery directly. A minimum SOC level required to cover the days journeys is maintained with a top-up charge if needed. The battery SOC is kept between 80% and 10% to help ensure long life is maintained.</p>
+<p>The charge rate is based on a forecast of available supply over the next 24 hours, if the available supply is more than the forecast demand then the charge rate can be reduced. If there is twice as much supply forecast than demand then the rate of charge could by dropped to half the available supply in order to distribute the charge better across the 24h.</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>0.8699</td><td>0.5864</td><td>0.9931</td><td>1.1783</td><td>2.9825</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>78.7%</td><td>85.3%</td><td>80.3%</td><td>84.1%</td><td>72.2%</td>
+    </tr>
+    <tr>
+        <td>Percentage of time demand is<br>more or the same as the supply</td>
+        <td>69.5%</td><td>74.5%</td><td>67.5%</td><td>76.1%</td><td>69.2%</td>
+    </tr>
+</table>
+
+<p>The results show substantial improvements again for the addition of smart charging, with smart charging + solar showing the largest gain. It is notable that the model suggests that a 2.98 kW solar PV array (a fairly typical amount for a home solar install) could provide 72.2% of almost 10000 miles a year of driving directly.</p>
+
+<p>The feasibility of implementing this kind of variable rate smart charging on a household level with onsite solar pv needs a bit more investigation. The domestic charger on the nissan leaf can vary its charge rate in between 7A and 32A for the 6kW model or 7A and 13A for the 3kW model, there is an open source initial version of a solar pv to electric car charger. There is discussion that to prelong the health of the battery its better to charge at a higher rate and up to the moment of starting your journey, a more in depth understanding of the consequences of implementing this kind of charging and the balance point between battery life impacts and improved grid stability benefits or improved household economics would need to be understood.</p>
+
+<p>Another possibility is that an aggregate demand profile for charging hundreds of electric cars could generally fit a renewable energy availability profile through a mixture of a larger portion of fixed rate charging cars charging at times of high availability than at other times.</p>
+
+<p>In the next series of examples we will combine the demand models for traditional electricity demand, electric heating and electric vehicles into one model and explore the implication of different electric vehicle demand profiles when interacting with multiple generation sources and multiple demand types.</p>
+
+
+
+
+
+

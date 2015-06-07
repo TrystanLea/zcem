@@ -1,0 +1,54 @@
+<h2>Wind and sun supply and flat demand</h2>
+<p>Tip: Try keeping the total energy cost the same while increasing supply demand matching.<br> Costs are for onshore wind and solar power.</p>
+
+<table style="width:100%">
+<tr>
+<td>
+
+Supply A:
+<select id="windandsun_flatdemand_gen_typeA" autocomplete="off">
+    <option value=0 selected="selected">Onshore wind</option>
+    <option value=1>Offshore wind</option>
+    <option value=2>Wave power</option>
+    <option value=3>Tidal power</option>
+    <option value=4>Solar power</option>
+</select><br>
+Capacity (kW): <input id="windandsun_flatdemand_gen_capacityA" type="text" style="width:100px" value="1.0" autocomplete="off"/>
+<br>
+Cost (£/MWh): <input id="windandsun_flatdemand_gen_costA" type="text" style="width:100px" value="82.5" autocomplete="off"/>
+
+</td>
+<td>
+
+Supply B:
+<select id="windandsun_flatdemand_gen_typeB" autocomplete="off">
+    <option value=0>Onshore wind</option>
+    <option value=1>Offshore wind</option>
+    <option value=2>Wave power</option>
+    <option value=3>Tidal power</option>
+    <option value=4 selected="selected">Solar power</option>
+</select><br>
+Capacity (kW): <input id="windandsun_flatdemand_gen_capacityB" type="text" style="width:100px" value="1.0" autocomplete="off"/>
+<br>
+Cost (£/MWh): <input id="windandsun_flatdemand_gen_costB" type="text" style="width:100px" value="79.23" autocomplete="off"/>
+</td>
+<td>
+
+View:
+<button id="pan-left"><</button>
+<button id="pan-right">></button>
+<button id="zoom-out">-</button>
+<button id="zoom-in">+</button>
+<button id="reset">reset</button>
+
+</td>
+</tr>
+</table>
+
+<div id="placeholder_bound" style="width:100%; height:500px;">
+    <div id="placeholder"></div>
+</div>
+
+<pre id="out" style="font-size:16px; line-height:28px"></pre>
+
+<button class="view-source">View source code</button>

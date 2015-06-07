@@ -1,0 +1,158 @@
+<h2>Simple heating model with heatpump's powered by renewable energy</h2>
+
+<p>The ZeroCarbonBritain dataset includes weighted daily temperatures for 10 years. This dataset can be combined with the solar dataset and a basic household energy model to create a seasonal heating demand model with which the level of matching can be compared for different renewable energy generation types.</p>
+
+<p>Solar gains are an important aspect of space heating. Using <a href="http://github.com/emoncms/MyHomeEnergyPlanner">MyHomeEnergyPlanner</a> to model a concept low energy house with fabric energy efficiency of 120W/K and a total of 16m2 of window area on a 80m2 (floor area) house with external surface area 206.4m2 the maximum potential annual solar gains where calculated to be 4429 kWh.</p>
+
+<p>Running a low electricity demand of 2200 kWh a year and taking into account the solar gains. The space heating demand is only 4,247 kWh/year (compared to 13500 kWh/year for a typical house today a 68% space heating energy saving). If that remaining heat demand is supplied by a heatpump the electrical input should be 1,416 kWh/year.</p>
+
+<p>Building an hourly space heating model:</p>
+
+<p>In order to calculate the space heating demand the model first calculates the total heating demand before solar gains and internal gains are taken into account. It then subtracts the internal gains (heat given off by appliances/cooking/lights etc) and the heat provided by solar gains through the windows, we use the solar pv capacity factor dataset here to provide our solar irradiance dataset. The amount of solar gain was scaled to match the amount of solar gain calculated in the SAP MyHomeEnergyPlanner tool based on the window orientations and areas – the total available solar gain energy is equivalent of 5.0 kW of solar pv.</p>
+
+<p>The model also keeps track of unused solar and internal gains when the internal temperature is already at the target temperature. The assumption at this point is that the exess heat is dumped outside perhaps through increased ventilation.</p>
+
+<p>The space heating demand after internal and solar gains are taken into account is then supplied with a heatpump with the simplifying assumption that the COP is constant and the heatpump fully responsive. A more complex model taking into account a degree of thermal mass in the building and the dynamics of the heatpump cross checked with real data would be useful here to check the assumptions taken in order to create an initial simplified model.</p>
+
+<p>Running the same fabric energy efficiency, max available solar gains and internal gains through this hourly model gives a space heating demand that is 14% higher than the space heating demand calculated with the SAP based MyHomeEnergyPlanner. The difference may be due to the differences in the way solar gains and internal gains utlisation is calculated in a monthly vs hourly model, further investigation is needed to fully understand the reason for this difference.</p>
+
+<p>Model heating demand results:</p>
+
+<table class="table">
+<tr><td>Total heat demand</td><td>8445 kWh/y</td></tr>
+<tr><td>- Total utilized internal gains:</td><td>2044 kWh/y of 2201 kWh/y</td></tr>
+<tr><td>- Total utilized solar gains:</td><td>1566 kWh/y of 4132 kWh/y</td></tr>
+<tr><td>= Total space heating demand:</td><td>4835 kWh/y</td></tr>
+<tr><td>Total heatpump electricity demand:</td><td>1611 kWh/y</td></tr>
+</table>
+
+<p>Running the model for each renewable generation type to investigate the degree of direct supply demand matching we get the following results:</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>0.568kW</td><td>0.383kW</td><td>0.651kW</td><td>0.776kW</td><td>1.95kW</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>51%</td><td>57%</td><td>61%</td><td>43%</td><td>10%</td>
+     </tr>
+    <tr>
+        <td>Percentage of time demand is<br>more or the same as the supply</td>
+        <td>59%</td><td>59%</td><td>58%</td><td>54%</td><td>41%</td>
+     </tr>
+</table>
+
+<p>Onshore, Offshore and Wave give quite similar levels of matching. Solar PV supplies the least demand because most of the solar electricity is generated in the summer and most of the heating demand is of course in the winter but also importantly when the sun is shining the heat demand is less due to direct solar gains, the dataset we are using for solar pv generation and solar gains is the same dataset.</p>
+
+<p><b>Increasing supply / demand matching by adding in a thermal store</b></p>
+
+<p>One of the ways we can meet more of the heat demand is by adding in a thermal store that charges up when there is exess electricity supply and provides heat when the electricity supply for the heatpump is not enough to meet the heating demand.</p>
+
+<p>A typical domestic hot water tank contains around 168L of water. If the temperature of the water is raised from 35C (the lowest temperature at which the water could be usable for a heatpump radiator underfloor system) to 70C (high temperatures lower the heatpump operating efficiency) the amount of thermal energy stored is:</p>
+
+<p>(70C-35C) x 4.2 kJ/L.K x 168L = 35280 kJ = 6.9 kWh</p>
+
+<p>Its possible to get large thermal stores that can store 1000 to 3000L of water. A 1000L thermal store could store 41 kWh, a 3000L store 123 kWh.</p>
+
+<p>Adding a perfect 100 kWh thermal store to the model we get the following results: (the intention here is just to get an initial rough understanding of the order of magnitudes required, a more realistic thermal store model would need to take in many more factors such as effect of heatpump efficiency at different store temperatures, stratification, heat loss from the store etc)
+</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>0.568kW</td><td>0.383kW</td><td>0.651kW</td><td>0.776kW</td><td>1.95kW</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>71%</td><td>72%</td><td>77%</td><td>64%</td><td>39%</td>
+     </tr>
+    <tr>
+        <td>Percentage of time demand is<br>more or the same as the supply</td>
+        <td>72%</td><td>78%</td><td>80%</td><td>77%</td><td>69%</td>
+     </tr>
+</table>
+
+<p>The addition of the thermal store increased onshore wind's matching by 20% points, offshore by 15%, wave by 16%, tidal by 21% and solar by 29%.</p>
+
+<p>How do these improvements compare with oversizing generation capacity by 20%.</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>0.682kW</td><td>0.460kW</td><td>0.781kW</td><td>0.931kW</td><td>2.34kW</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>56%</td><td>64%</td><td>68%</td><td>47%</td><td>11%</td>
+     </tr>
+    <tr>
+        <td>Percentage of time demand is<br>more or the same as the supply</td>
+        <td>62%</td><td>65%</td><td>64%</td><td>57%</td><td>42%</td>
+     </tr>
+</table>
+
+<p>and then combining 20% oversupply with 100 kWh of thermal storage:</p>
+
+<table class="table">
+    <tr>
+        <td></td>
+        <td style="width:12%">Onshore wind</td>
+        <td style="width:12%">Offshore wind</td>
+        <td style="width:12%">Wave</td>
+        <td style="width:12%">Tidal</td>
+        <td style="width:12%">Solar</td>
+    </tr>
+    <tr>
+        <td>Installed capacity</td>
+        <td>0.682kW</td><td>0.460kW</td><td>0.781kW</td><td>0.931kW</td><td>2.34kW</td>
+    </tr>
+    <tr>
+        <td>Percentage of demand<br>supplied directly</td>
+        <td>77%</td><td>80%</td><td>86%</td><td>72%</td><td>42%</td>
+     </tr>
+    <tr>
+        <td>Percentage of time demand is<br>more or the same as the supply</td>
+        <td>86%</td><td>83%</td><td>86%</td><td>78%</td><td>71%</td>
+     </tr>
+</table>
+
+<p>We've seen here how we can get 15-30% points gains in matching with 100 kWh of thermal storage. How much storage do we need to meet 100% of the demand, we will include a 20% oversupply.</p>
+
+<p>
+Onshore wind required about <i>3500 kWh</i> of thermal storage to reach 100%<br>
+Offshore wind required about <i>2800 kWh</i> of thermal storage to reach 100%<br>
+Wave required about <i>1500 kWh</i> of thermal storage to reach 100%<br>
+Tidal required about <i>2200 kWh</i> of thermal storage to reach 100%<br>
+Solar PV required about <i>3700 kWh</i> of thermal storage to reach 100%<br>
+</p>
+
+<p>Reaching 100% supply/demand matching with a heatstore requires that we can store large amounts of heat over very long periods of time whats called an inter seasonal heat store. A 1000 kWh of storage is around 25000 Litres of water. A volume of around 25m3, equivalent to a room in a house of 3.2m by 3.2m by 2.5m.</p>
+
+<p>Given existing challenges with the retrofit of buildings and likely limited space for this kind of solution we may well find that a combination of a small heat store and long term electircity store such as power to gas provides the more practical solution for meeting the larger gaps in supply and demand.</p>
+
+<p>ZeroCarbonBritain includes 100 Gwh of heat storage which is equivalent to around 3.74 kWh of heat storage per household (around the magnitude of storage available in a conventional hot water cylinder). 100GWh of heat storage is already 4x the ZCB allocation for electric car storage and pumped hydro storage both at around 25 Gwh each. Most of ZCB's storage is power to gas @ 60000GWh.</p>

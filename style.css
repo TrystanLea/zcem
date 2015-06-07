@@ -1,0 +1,148 @@
+body {
+    font-family:"Ubuntu Light";
+    margin:0px;
+    padding:0px;
+    height:100%;
+}
+
+#wrap {
+    min-height: 100%;
+    height: auto !important;
+    height: 100%;
+    /* Negative indent footer by it's height */
+    margin: 0 auto -40px;
+}
+
+@media (max-width: 925px) {
+    #menu {
+        padding:20px;
+    }
+
+    #model-bound {
+        padding:20px;
+        
+    }
+
+    #description {
+        padding:20px;
+    }
+}
+
+@media (min-width: 925px) and (max-width: 1360px) {
+    #menu {
+        padding:20px;
+        width:150px;
+        float:left;
+    }
+
+    #model-bound {
+        padding:20px;
+        width:75%;
+        float:left;
+        
+    }
+
+    #description {
+        padding:20px;
+        float:left;
+    }
+}
+
+@media (min-width: 1360px) {
+    #menu {
+        float:left;
+        padding:20px;
+        width:150px;
+    }
+
+    #model-bound {
+        float:left;
+        padding:20px;
+        width:50%;
+    }
+
+    #description {
+        float:left;
+        padding:20px;
+        width:30%;
+    }
+}
+
+
+
+#header {
+    background-color: #fffcaa;
+    padding:10px;
+}
+
+pre {
+    border: 1px solid #ccc;
+    background-color:#eee;
+    padding:20px;
+}
+
+#footer {
+    background-color: #f5f5f5;
+    text-align: center;
+    font-size: 14px;
+    padding-top:10px;
+    height: 30px;
+}
+
+.table {
+    width:100%;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+    border-spacing: 0px;
+}
+
+.table td {
+    border-top: 1px solid #DDD;
+    padding-top: 8px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-bottom: 8px;
+    line-height: 20px;
+    vertical-align: top;
+}
+
+.table th {
+    text-align:left;
+    border-top: 1px solid #DDD;
+    padding-top: 8px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-bottom: 8px;
+    line-height: 20px;
+    vertical-align: top;
+}
+
+ul {
+    list-style: outside none none;
+    margin: 0;
+    padding: 0;
+}
+
+ul li a {
+    padding: 10px 0px;
+    width:150px;
+    display: block;
+    float:left;
+    color:#888;
+    text-decoration: none;
+}
+
+ul li a:hover {
+    text-decoration: none;
+    color: var(--app-color);
+}
+
+a {
+    color:#888;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: none;
+    color: var(--app-color);
+}
