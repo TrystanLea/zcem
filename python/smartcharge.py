@@ -1,13 +1,13 @@
 # dataset index:
 # 0:onshore wind, 1:offshore wind, 2:wave, 3:tidal, 4:solar, 5:traditional electricity
 gen_type = 0
-installed_capacity = 0.870 # kW
+installed_capacity = 2.6 # kW
 
 # reference        wind   wind   wave   tidal  solar
 capacityfactors = [0.3233,0.4796,0.2832,0.2387,0.0943]
 
 # Load dataset
-with open("../dataset/tenyearsdata.csv") as f:
+with open("../tenyearsdata.csv") as f:
     content = f.readlines()
 hours = len(content)
 
