@@ -59,6 +59,10 @@ page = (window.location.hash).substring(1);
 if (page=="") page = "introduction";
 load_page(page);
 
+$(document).ready(function() {
+$("#rightpanel-inner").html(view_desc[page]);
+});
+
 $(window).on('hashchange', function() {
     timerStart = Date.now();
     page = (window.location.hash).substring(1);
@@ -72,6 +76,7 @@ $(window).on('hashchange', function() {
     $("#bodyfade").hide();
     
     }
+    fixsidebar = false;
 });
 
 function load_page(page)

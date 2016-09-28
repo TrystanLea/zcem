@@ -110,7 +110,7 @@ function resize()
     var width = $("#placeholder_bound").width();
     var height = $("#placeholder_bound").height();
     $("#placeholder").width(width);
-    $("#placeholder").height(height);
+    $("#placeholder").height(width*0.52);
 }
 
 function data_view(start,end,interval)
