@@ -1,4 +1,29 @@
-function all_init()
+/*
+
+1. Renewable supply
+2. Traditional electricity demand
+3. Space Heating
+4. Water Heating **
+5. EV's
+6. Heatstore
+7. Lithium ion store
+8. Pumped storage
+-----
+9. Hydrogen production, storage & fuelcell's
+10. Synthetic fuel production: liquid and gas & stores
+11. Industrial demand
+12. Aviation demand
+13. Gas turbines for backup
+
+- electric trains
+- hydrogen vehicles
+- biofuel vehicles
+- biofuel aircraft
+
+*/
+
+
+function national_init()
 {
     // ---------------------------------------------------------------------------
     // dataset index:
@@ -6,6 +31,10 @@ function all_init()
     onshorewind_capacity = 1.86
     offshorewind_capacity = 0.0
     solarpv_capacity = 1.86
+    hydro_capacity = 0.0
+    wave_capacity = 0.0
+    tidal_capacity = 0.0
+    nuclear_capacity = 0.0
 
     // ---------------------------------------------------------------------------
     traditional_electric = 2555
@@ -18,17 +47,8 @@ function all_init()
     solar_gains_capacity = 5.0           // 5kW = average of about 500W from MyHomeEnergyPlanner model
     heatpump_COP = 3.0
 
-    average_temperature = 0
-
-    total_heat_demand = 0
-    total_internal_gains_unused = 0
-    total_solar_gains = 0
-    total_solar_gains_unused = 0
-    total_heating_demand = 0
-
     heatstore_capacity = 10
     heatstore = heatstore_capacity * 0.5
-    total_heatpump_demand = 0
 
     // ---------------------------------------------------------------------------
     // EV performance and battery capacity
@@ -44,19 +64,39 @@ function all_init()
     EV_use_profile = [0,0,0,0,0,0,0,2,7,3,0,0,1,1,0,0,0,7,2,2,2,0,0,0]
 
     // Calculate total miles per day travelled
-    EV_miles_day = 0
-    for (h in EV_use_profile) EV_miles_day += EV_use_profile[h]
-
+    EV_miles_day = 0; for (h in EV_use_profile) EV_miles_day += EV_use_profile[h]
     // Normalise
     for (h in EV_use_profile) EV_use_profile[h] = (EV_use_profile[h] / EV_miles_day)
 
-    total_miles_driven = 0
     // ---------------------------------------------------------------------------
     liion_capacity = 0
     liion_SOC = liion_capacity * 0.5
     // ---------------------------------------------------------------------------
+    electrolysis_capacity = 1.0;
+    fuel_cell_capacity = 1.0;
+    
+    H2_store_capacity = 10.0;
+    H2_store_level = 0
+    
+    liquid_store_capacity = 350.0
+    liquid_store_level = 0
+    
+    methane_store_capacity = 12500.0
+    methane_store_level = 0
+    
+    CCGT_capacity = 2.0
+    
+    // Aviation
+    aviation_miles_per_kwh = 1.3  // passenger miles per kwh based on 50 kWh per 100p/km
+    aviation_miles = 1200 
+    
+    view_mode = "supplydemand"
+    
+    $("#view-stores").click(function(){
+        view_mode = "stores"
+    });
 }
-function all_run()
+function national_run()
 {
     total_supply = 0
     total_demand = 0
@@ -67,12 +107,31 @@ function all_run()
     total_solar_gains_unused = 0
     total_heating_demand = 0
     total_heatpump_demand = 0
+    
+    average_temperature = 0
 
     exess_generation = 0
     unmet_demand = 0
     unmet_demand_atuse = 0
     hours_met = 0
     total_miles_driven = 0
+    
+    total_liion_charge = 0
+    total_liion_discharge = 0
+    
+    total_electrolysis_demand = 0
+    total_fuel_cell_output = 0
+    
+    biomass_requirement = 0
+    total_synthfuel_production = 0
+    total_methane_production = 0
+    total_CCGT_output = 0
+    
+    H2_store_level = 0
+    liquid_store_level = 50
+    methane_store_level = 300
+    
+    unmet_aviation_demand = 0
 
     data = [];
     data[0] = [];
@@ -100,11 +159,17 @@ function all_run()
         
         // ---------------------------------------------------------------------------
         // Renewable supply
-        // ---------------------------------------------------------------------------    
+        // --------------------------------------------------------------------------- 
+        // 0:onshore wind, 1:offshore wind, 2:wave, 3:tidal, 4:solar, 5:traditional electricity   
         onshorewind = capacityfactors[0] * onshorewind_capacity
         offshorewind = capacityfactors[1] * offshorewind_capacity
+        wave = capacityfactors[2] * wave_capacity
+        tidal = capacityfactors[3] * tidal_capacity
         solarpv = capacityfactors[4] * solarpv_capacity
-        supply = onshorewind + offshorewind + solarpv
+        hydro = 0.4 * hydro_capacity // Assuming 40% capacity factor
+        nuclear = 0.9 * nuclear_capacity // Assuming 90% uptime
+        
+        supply = onshorewind + offshorewind + solarpv + wave + tidal + hydro + nuclear
         total_supply += supply
         
         balance = supply
@@ -289,27 +354,173 @@ function all_run()
         }
         
         // ---------------------------------------------------------------------------
-        // Electric store remaining supply
+        // Lithium ion store
         // ---------------------------------------------------------------------------
         liion_charge = 0
         liion_discharge = 0
         
         if (balance>0) {
             liion_charge = balance
-            if ((liion_SOC+liion_charge)>liion_capacity) {
-                liion_charge = liion_capacity - liion_SOC;
+            liion_charge_s2 = liion_charge * 0.92 // charge loss
+            if ((liion_SOC+liion_charge_s2)>liion_capacity) {
+                liion_charge_s2 = liion_capacity - liion_SOC;
             }
-            liion_SOC += liion_charge
+            liion_charge = liion_charge_s2 / 0.92
+            
+            liion_SOC += liion_charge_s2
             balance -= liion_charge
+            total_liion_charge += liion_charge
             
         } else {
             liion_discharge = -balance
-            if ((liion_SOC-liion_discharge)<0) {
-                liion_discharge = liion_SOC;
+            liion_discharge_s2 = liion_discharge / 0.92
+            if ((liion_SOC-liion_discharge_s2)<0) {
+                liion_discharge_s2 = liion_SOC;
             }
-            liion_SOC -= liion_discharge
+            liion_discharge = liion_discharge_s2 * 0.92
+            liion_SOC -= liion_discharge_s2
             balance += liion_discharge
+            total_liion_discharge += liion_discharge
         }
+        
+        // ---------------------------------------------------------------------------
+        // Hydrogen production
+        // ---------------------------------------------------------------------------
+        // Efficiency of alkaline electrolyzer is 70%, Efficiency of PEM fuel cell is 47%
+        // Hydrogen or batteries for grid storage? A net energy analysis
+        // http://pubs.rsc.org/en/content/articlehtml/2015/ee/c4ee04041d
+        
+        electricity_for_electrolysis = 0
+        H2_balance = 0
+        
+        if (balance>0) {
+            electricity_for_electrolysis = balance
+            // Electrolysis capacity limit
+            if (electricity_for_electrolysis>electrolysis_capacity) electricity_for_electrolysis = electrolysis_capacity
+            
+            // 70% efficiency of hydrogen production
+            H2_produced = electricity_for_electrolysis * 0.7
+            H2_balance += H2_produced
+        }
+
+        // ---------------------------------------------------------------------------
+        // Synthetic liquid fuel production Efficiency:53% 
+        // ---------------------------------------------------------------------------
+        // 2.0 kWh of biomass + 1.0 kWh of hydrogen = 1.6 kWh of synthetic liquid fuel
+        if (H2_balance>0) {
+            var H2_for_FT = H2_balance
+            var biomass_for_FT = H2_for_FT / 0.5
+            var synthfuel = biomass_for_FT * 0.8
+            
+            if ((liquid_store_level+synthfuel)>liquid_store_capacity) {
+                synthfuel = liquid_store_capacity - liquid_store_level
+            }
+            
+            biomass_for_FT = synthfuel / 0.8
+            H2_for_FT = biomass_for_FT * 0.5
+            
+            liquid_store_level += synthfuel
+            H2_balance -= H2_for_FT
+            biomass_requirement += biomass_for_FT
+            total_synthfuel_production += synthfuel
+        }
+        
+        // ---------------------------------------------------------------------------
+        // Synthetic methane production Efficiency:67% 
+        // 1.43 kWh of electric input results in 1.0 kWh of backup electric: 70% but 2.0 kWh of biomass are also required
+        // ---------------------------------------------------------------------------
+        // 2.0 kWh of biomass + 1.0 kWh of hydrogen = 2.0 kWh of synthetic methane
+        if (H2_balance>0) {
+            var H2_for_sabatier = H2_balance
+            var biomass_for_sabatier = H2_for_sabatier * 2.0
+            var methane = biomass_for_sabatier
+
+            if ((methane_store_level+methane)>methane_store_capacity) {
+                methane = methane_store_capacity - methane_store_level
+            }
+            biomass_for_sabatier = methane
+            H2_for_sabatier = biomass_for_sabatier * 0.5
+            
+            methane_store_level += methane
+            H2_balance -= H2_for_sabatier
+            biomass_requirement += biomass_for_sabatier
+            total_methane_production += methane
+        }
+
+        // ---------------------------------------------------------------------------
+        // Hydrogen storage
+        // ---------------------------------------------------------------------------
+        if (H2_balance>0) {
+            H2_stored = H2_balance;
+            // Limit on hydrogen production if store is full
+            if ((H2_store_level+H2_stored)>H2_store_capacity) {
+                H2_stored = H2_store_capacity - H2_store_level
+            }
+            H2_unused = H2_balance - H2_stored
+            
+            // Work backwards to get the ammended electricity consumption
+            electricity_for_electrolysis -= (H2_unused / 0.7)
+            
+            // Add hydrogen to store
+            H2_store_level += H2_stored
+        }
+    
+        // Subtract electric used for electrolysis from balance
+        balance -= electricity_for_electrolysis
+        total_electrolysis_demand += electricity_for_electrolysis
+
+        // ---------------------------------------------------------------------------
+        // Aviation demand distributed eavenly across the year
+        // ---------------------------------------------------------------------------
+        var hourly_aviation_demand = (aviation_miles / aviation_miles_per_kwh) / (365.0 * 24.0)
+        
+        if ((liquid_store_level-hourly_aviation_demand)<0) {
+            unmet_aviation_demand += -1 * (liquid_store_level-hourly_aviation_demand)
+            liquid_store_level = 0
+        } else {
+            liquid_store_level -= hourly_aviation_demand
+        }
+        
+        // ---------------------------------------------------------------------------
+        // Backup: H2 fuel cells
+        // ---------------------------------------------------------------------------
+        
+        if (balance<0) {
+            fuel_cell_output = -balance
+            // Fuel cell capacity limit
+            if (fuel_cell_output>fuel_cell_capacity) fuel_cell_output = fuel_cell_capacity
+            // 47% efficiency of fuel cell
+            H2_used = fuel_cell_output / 0.47
+            // Low store level limit
+            if (H2_used>H2_store_level) H2_used = H2_store_level
+            fuel_cell_output = H2_used * 0.47
+            // Remove hydrogen to store
+            H2_store_level -= H2_used
+            // Subtract electric used for electrolysis from balance
+            balance += fuel_cell_output
+            total_fuel_cell_output += fuel_cell_output;
+        }
+        
+        // ---------------------------------------------------------------------------
+        // Backup: Gas power stations
+        // ---------------------------------------------------------------------------
+        if (balance<0) {
+            CCGT_output = -balance
+            if (CCGT_output>CCGT_capacity) CCGT_output = CCGT_capacity
+            
+            CCGT_methane = CCGT_output / 0.5
+            
+            if ((methane_store_level-CCGT_methane)<0) {
+               CCGT_methane = methane_store_level
+            }
+            
+            CCGT_output = CCGT_methane * 0.5
+            
+            methane_store_level -= CCGT_methane
+            balance += CCGT_output
+            total_CCGT_output += CCGT_output
+        }
+        
         
         // ---------------------------------------------------------------------------
         // Final balance
@@ -341,6 +552,8 @@ function all_run()
         //d5.push([hour,EV_charge_rate]);
         // d5.push([hour,EV_charge_rate_suppliment+EV_charge_rate]);
     }
+    
+    
 
     average_temperature = average_temperature / hours
 
@@ -350,6 +563,7 @@ function all_run()
     prc_demand_supplied = ((total_demand - unmet_demand) / total_demand) * 100
     prc_time_met = (1.0 * hours_met / hours) * 100
 
+    var units = "kWh";
     var out = "";
     out += "-----------------------------------------------------------------\n"
     out += "Space heating\n"
@@ -358,11 +572,11 @@ function all_run()
     out += "Average external temperature:\t\t"+average_temperature+"C\n"
     out += "Target internal temperature:\t\t"+target_internal_temperature+"C\n"
     out += "\n"; 
-    out += "Total heat demand\t\t\t"+(total_heat_demand/10).toFixed(0)+" kWh/y\n"
-    out += "- Total utilized internal gains:\t"+(used_internal_gains/10).toFixed(0)+" kWh/y of "+(traditional_electric*1).toFixed(0)+" kWh/y\n"
-    out += "- Total utilized solar gains:\t\t"+(used_solar_gains/10).toFixed(0)+" kWh/y of "+(total_solar_gains/10).toFixed(0)+" kWh/y\n"
-    out += "= Total space heating demand:\t\t"+(total_heating_demand/10).toFixed(0)+" kWh/y\n"
-    out += "= Total heatpump electricity demand:\t"+(total_heatpump_demand/10).toFixed(0)+" kWh/y ("+(total_heatpump_demand/3650).toFixed(1)+" kWh/d)\n";
+    out += "Total heat demand\t\t\t"+(total_heat_demand/10).toFixed(0)+" "+units+"/y\n"
+    out += "- Total utilized internal gains:\t"+(used_internal_gains/10).toFixed(0)+" "+units+"/y of "+(traditional_electric*1).toFixed(0)+" "+units+"/y\n"
+    out += "- Total utilized solar gains:\t\t"+(used_solar_gains/10).toFixed(0)+" "+units+"/y of "+(total_solar_gains/10).toFixed(0)+" "+units+"/y\n"
+    out += "= Total space heating demand:\t\t"+(total_heating_demand/10).toFixed(0)+" "+units+"/y\n"
+    out += "= Total heatpump electricity demand:\t"+(total_heatpump_demand/10).toFixed(0)+" "+units+"/y ("+(total_heatpump_demand/3650).toFixed(1)+" "+units+"/d)\n";
     out += "\n";
     out += "-----------------------------------------------------------------\n"
     out += "Electric vehicles\n"
@@ -370,45 +584,82 @@ function all_run()
     out += "EV miles per year: "+Math.round(total_miles_driven/10)+" miles\n"
     out += "\n"
     out += "-----------------------------------------------------------------\n"
+    out += "Lithium ion (Charge: 92%, Discharge:92%, Round trip:85%)\n"
+    out += "-----------------------------------------------------------------\n"
+    out += "Total charge: "+Math.round(total_liion_charge/10)+" "+units+"/y\n";
+    out += "Total discharge: "+Math.round(total_liion_discharge/10)+" "+units+"/y\n";
+    out += "\n"
+    out += "-----------------------------------------------------------------\n"
+    out += "Hydrogen (Electrolysis:70%, FuelCell:47%, Round trip:33%)\n"
+    out += "-----------------------------------------------------------------\n"
+    out += "Total electrolysis demand: "+Math.round(total_electrolysis_demand/10)+" "+units+"/y\n";
+    out += "Total fuel cell output: "+Math.round(total_fuel_cell_output/10)+" "+units+"/y\n";
+    out += "\n"
+    out += "-----------------------------------------------------------------\n"
+    out += "Synthetic liquid and gas, Biomass\n"
+    out += "Biomass land area 0.7 W/m2 (mix short rotation coppice and energy crops)\n"
+    out += "There is 1160 m2 of arable land per household in the UK\n";
+    out += "-----------------------------------------------------------------\n"
+    out += "Total synthetic liquid fuel produced: "+Math.round(total_synthfuel_production/10)+" "+units+"/y\n";
+    out += "Unmet aviation demand: "+Math.round(unmet_aviation_demand/10)+" "+units+"/y\n";
+    out += "Total synthetic methane produced: "+Math.round(total_methane_production/10)+" "+units+"/y\n";
+    out += "Total biomass required: "+Math.round(biomass_requirement/10)+" "+units+"/y\n";
+    var biomass_m2 = ((biomass_requirement/3650)/0.024) / 0.7;
+    out += "Total biomass land area: "+Math.round(biomass_m2)+" m2 = "+Math.round(100*biomass_m2/1160)+"% of arable land\n";
+    
+    out += "\n"
+    out += "Total CCGT output: "+Math.round(total_CCGT_output/10)+" "+units+"/y\n"
+    out += "\n"
+    out += "-----------------------------------------------------------------\n"
     out += "Final balance\n"
     out += "-----------------------------------------------------------------\n"
-    out += "Total supply: " + (total_supply/10).toFixed(1) + "kWh/y ("+(total_supply/3650).toFixed(1)+" kWh/d)\n";
-    out += "Total demand: " + (total_demand/10).toFixed(1) + "kWh/y ("+(total_demand/3650).toFixed(1)+" kWh/d)\n";
+    out += "Total supply (electric + biomass): " + ((total_supply+biomass_requirement)/10).toFixed(1) + " "+units+"/y ("+((total_supply+biomass_requirement)/3650).toFixed(1)+" "+units+"/d)\n";
+    
+    var total_demand_all = total_demand + (10*aviation_miles / aviation_miles_per_kwh);
+    out += "Total demand (electric + aviation): " + (total_demand_all/10).toFixed(1) + " "+units+"/y ("+(total_demand_all/3650).toFixed(1)+" "+units+"/d)\n";
+    
+    out += "Total electricity supply: " + (total_supply/10).toFixed(1) + " "+units+"/y ("+(total_supply/3650).toFixed(1)+" "+units+"/d)\n";
+    out += "Total electricity demand: " + (total_demand/10).toFixed(1) + " "+units+"/y ("+(total_demand/3650).toFixed(1)+" "+units+"/d)\n";
     out += "\n"
-    out += "Exess generation: " + (exess_generation/10).toFixed(0) + "kWh/y\n"
-    out += "Unmet elec demand: " + (unmet_demand/10).toFixed(0) + "kWh/y\n"
-    out += "Unmet demand at use: " + (unmet_demand_atuse/10).toFixed(0) + "kWh/y\n"
+    out += "Exess generation: " + (exess_generation/10).toFixed(0) + ""+units+"/y\n"
+    out += "Unmet elec demand: " + (unmet_demand/10).toFixed(0) + ""+units+"/y\n"
+    out += "Unmet demand at use: " + (unmet_demand_atuse/10).toFixed(0) + ""+units+"/y\n"
     out += "\n"
     out += "Percentage of demand supplied directly "+(prc_demand_supplied).toFixed(1)+"%\n"
     out += "Percentage of time supply was more or the same as the demand "+(prc_time_met).toFixed(1)+"%\n"
+    out += "\n"
+
         
     $("#out").html(out);
 }
 // ---------------------------------------------------------------------------    
 	
-function all_view(start,end,interval)
+function national_view(start,end,interval)
 {
     var dataout = data_view(start,end,interval);
     
-    $.plot("#placeholder", [
+    if (view_mode=="supplydemand")
+    {
+        $.plot("#placeholder", [
 
-        // tradelec + heatpump + ev
-        {label: "EV charging demand", data:dataout[3], yaxis:1, color:"#aac15b", lines: {lineWidth:0, fill: 1.0 }}, 
-        // tradelec + heatpump
-        {label: "Heatpump electric demand", data:dataout[2], yaxis:1, color:"#cc4400", lines: {lineWidth:0, fill: 1.0 }},
-        // tradelec
-        {label: "Traditional electric demand", data:dataout[1], yaxis:1, color:"#00aacc", lines: {lineWidth:0, fill: 1.0 }}, 
-        // EV SOC
-        {label: "EV SOC", data:dataout[4], yaxis:2, color:"#cc0000", lines: {lineWidth:1, fill: false }},
-        // supply
-        {label: "Renewable Supply", data:dataout[0], yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
+            // tradelec + heatpump + ev
+            {label: "EV charging demand", data:dataout[3], yaxis:1, color:"#aac15b", lines: {lineWidth:0, fill: 1.0 }}, 
+            // tradelec + heatpump
+            {label: "Heatpump electric demand", data:dataout[2], yaxis:1, color:"#cc4400", lines: {lineWidth:0, fill: 1.0 }},
+            // tradelec
+            {label: "Traditional electric demand", data:dataout[1], yaxis:1, color:"#00aacc", lines: {lineWidth:0, fill: 1.0 }}, 
+            // EV SOC
+            {label: "EV SOC", data:dataout[4], yaxis:2, color:"#cc0000", lines: {lineWidth:1, fill: false }},
+            // supply
+            {label: "Renewable Supply", data:dataout[0], yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
 
-        ], {
-            xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
-            yaxes: [{},{min: 0, max: 100}],
-            grid: {hoverable: true, clickable: true},
-            selection: { mode: "x" },
-            legend: {position: "nw"}
-        }
-    );
+            ], {
+                xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
+                yaxes: [{},{min: 0, max: 100}],
+                grid: {hoverable: true, clickable: true},
+                selection: { mode: "x" },
+                legend: {position: "nw"}
+            }
+        );
+    }
 }
