@@ -42,8 +42,16 @@ function national_init()
 
     // ---------------------------------------------------------------------------
     // Space heating variables
+    total_floor_area = 85 // m2
+    storey_height = 2.2
+    wall_ins_thickness = 0.2
+    floor_ins_thickness = 0.2
+    loft_ins_thickness = 0.3
+    window_type = "double"
+    glazing_extent = 0.2
+    air_change_per_hour = 1.0
+   
     target_internal_temperature = 18.4
-    fabric_efficiency = 0.120            // 120 W/K
     solar_gains_capacity = 5.0           // 5kW = average of about 500W from MyHomeEnergyPlanner model
     heatpump_COP = 3.0
 
@@ -100,9 +108,20 @@ function national_init()
 }
 function national_run()
 {
+    total_offshore_wind_supply = 0
+    total_onshore_wind_supply = 0
+    total_solar_supply = 0
+    total_wave_supply = 0
+    total_tidal_supply = 0
+    total_hydro_supply = 0
+    total_nuclear_supply = 0
+    
     total_supply = 0
     total_demand = 0
-
+ 
+ 
+    total_trad_elec_demand = 0
+    total_EV_demand = 0
     total_heat_demand = 0
     total_internal_gains_unused = 0
     total_solar_gains = 0
@@ -122,6 +141,7 @@ function national_run()
     total_liion_discharge = 0
     
     total_electrolysis_demand = 0
+    total_electrolysis_losses = 0
     total_fuel_cell_output = 0
     
     biomass_requirement = 0
@@ -130,6 +150,7 @@ function national_run()
     unmet_methane_demand = 0
     total_CCGT_output = 0
     total_unmet_before_CCGT = 0
+    total_CCGT_losses = 0
     
     H2_store_level = 0
     liquid_store_level = 50
@@ -137,6 +158,10 @@ function national_run()
     
     unmet_aviation_demand = 0
     unmet_liquid_demand = 0
+    total_aviation_demand = 0
+    
+    total_FT_losses = 0
+    total_sabatier_losses = 0
 
     data = [];
     data[0] = [];
@@ -144,6 +169,52 @@ function national_run()
     data[2] = [];
     data[3] = [];
     data[4] = [];
+
+    // ---------------------------------------------------------------------------------------------  
+    // Building energy model
+    // ---------------------------------------------------------------------------------------------
+    // 2. Metabolic gains
+    // 3. Solar gains calculator from window areas and orientations
+    
+    // 4. Seperate out cooking, lighting and appliances and water heating demand.
+    floor_area = total_floor_area / 2.0 
+    side = Math.sqrt(floor_area)
+         
+    walls_uvalue = 1/((1/1.5)+(1/(0.03/wall_ins_thickness))) // Base U-value is uninsulated cavity wall
+    floor_uvalue = 1/((1/0.7)+(1/(0.04/floor_ins_thickness))) // Base U-value is uninsulated solid floor
+    loft_uvalue = 1/((1/2.0)+(1/(0.03/loft_ins_thickness))) // Base U-value is uninsulated loft
+    
+    if (window_type=="single") window_uvalue = 4.8
+    if (window_type=="double") window_uvalue = 1.9
+    if (window_type=="triple") window_uvalue = 1.3
+
+    total_wall_area = (side * storey_height * 2) * 4
+    total_window_area = total_wall_area * glazing_extent
+    
+    windows_south = total_window_area * 0.4
+    windows_west = total_window_area * 0.2
+    windows_east = total_window_area * 0.2
+    windows_north = total_window_area * 0.2
+
+    floor_WK = floor_uvalue * floor_area
+    loft_WK = loft_uvalue * floor_area
+    
+    wall_south_WK = walls_uvalue * ((side * storey_height * 2) - windows_south)
+    wall_west_WK = walls_uvalue * ((side * storey_height * 2) - windows_west)
+    wall_east_WK = walls_uvalue * ((side * storey_height * 2) - windows_east)
+    wall_north_WK = walls_uvalue * ((side * storey_height * 2) - windows_north)
+    
+    window_WK = (windows_south + windows_west + windows_east + windows_north) * window_uvalue
+    
+    fabric_WK = floor_WK + loft_WK + wall_south_WK + wall_west_WK + wall_east_WK + wall_north_WK + window_WK
+    
+    building_volume = floor_area * storey_height * 2.0
+    infiltration_WK = 0.33 * air_change_per_hour * building_volume
+    
+    total_WK = fabric_WK + infiltration_WK
+    fabric_efficiency = total_WK * 0.001
+    // ---------------------------------------------------------------------------------------------    
+    // ---------------------------------------------------------------------------------------------
     
     total_trad_demand = 0
     var capacityfactors_all = [];
@@ -176,7 +247,15 @@ function national_run()
         
         supply = onshorewind + offshorewind + solarpv + wave + tidal + hydro + nuclear
         total_supply += supply
-        
+
+        total_offshore_wind_supply += offshorewind
+        total_onshore_wind_supply += onshorewind
+        total_solar_supply += solarpv
+        total_wave_supply += wave
+        total_tidal_supply += tidal
+        total_hydro_supply += hydro
+        total_nuclear_supply += nuclear
+
         balance = supply
         demand = 0
 
@@ -187,11 +266,12 @@ function national_run()
         tradelec = trad_demand_factor * traditional_electric * 10
         balance -= tradelec
         demand += tradelec
+        total_trad_elec_demand += tradelec
         
         // ---------------------------------------------------------------------------
         // Space Heating
         // ---------------------------------------------------------------------------
-        // External temperature
+        // External temperature        
         average_temperature += temperature
         
         // 1) Total heat demand
@@ -311,7 +391,8 @@ function national_run()
             
         demand += EV_charge_rate   
         demand += EV_charge_rate_suppliment
-        
+        total_EV_demand += EV_charge_rate
+        total_EV_demand += EV_charge_rate_suppliment
         /*
         // Simple night time charge alternative
         
@@ -428,6 +509,7 @@ function national_run()
             H2_balance -= H2_for_FT
             biomass_requirement += biomass_for_FT
             total_synthfuel_production += synthfuel
+            total_FT_losses += (synthfuel / (1.6/3.0)) - synthfuel
         }
         
         // ---------------------------------------------------------------------------
@@ -450,6 +532,7 @@ function national_run()
             H2_balance -= H2_for_sabatier
             biomass_requirement += biomass_for_sabatier
             total_methane_production += methane
+            total_sabatier_losses += (methane / (2/3)) - methane
         }
 
         // ---------------------------------------------------------------------------
@@ -473,11 +556,12 @@ function national_run()
         // Subtract electric used for electrolysis from balance
         balance -= electricity_for_electrolysis
         total_electrolysis_demand += electricity_for_electrolysis
-        
+        total_electrolysis_losses += electricity_for_electrolysis * 0.3
         // ---------------------------------------------------------------------------
         // Aviation demand distributed eavenly across the year
         // ---------------------------------------------------------------------------
         var hourly_aviation_demand = (aviation_miles / aviation_miles_per_kwh) / (365.0 * 24.0)
+        total_aviation_demand += hourly_aviation_demand
         
         if ((liquid_store_level-hourly_aviation_demand)<0) {
             unmet_liquid_demand += -1 * (liquid_store_level-hourly_aviation_demand)
@@ -527,6 +611,7 @@ function national_run()
             methane_store_level -= CCGT_methane
             balance += CCGT_output
             total_CCGT_output += CCGT_output
+            total_CCGT_losses += CCGT_output
         }
         
         
@@ -585,50 +670,65 @@ function national_run()
     prc_demand_supplied = ((total_demand - unmet_demand) / total_demand) * 100
     prc_time_met = (1.0 * hours_met / hours) * 100
 
-    var units = "kWh";
-    var out = "";
-    out += "-----------------------------------------------------------------\n"
-    out += "Space heating\n"
-    out += "-----------------------------------------------------------------\n"
-    out += "Building fabric performance:\t\t"+(fabric_efficiency*1000)+" W/K\n"
-    out += "Average external temperature:\t\t"+average_temperature+"C\n"
-    out += "Target internal temperature:\t\t"+target_internal_temperature+"C\n"
-    out += "\n"; 
-    out += "Total heat demand\t\t\t"+(total_heat_demand/10).toFixed(0)+" "+units+"/y\n"
-    out += "- Total utilized internal gains:\t"+(used_internal_gains/10).toFixed(0)+" "+units+"/y of "+(traditional_electric*1).toFixed(0)+" "+units+"/y\n"
-    out += "- Total utilized solar gains:\t\t"+(used_solar_gains/10).toFixed(0)+" "+units+"/y of "+(total_solar_gains/10).toFixed(0)+" "+units+"/y\n"
-    out += "= Total space heating demand:\t\t"+(total_heating_demand/10).toFixed(0)+" "+units+"/y\n"
-    out += "= Total heatpump electricity demand:\t"+(total_heatpump_demand/10).toFixed(0)+" "+units+"/y ("+(total_heatpump_demand/3650).toFixed(1)+" "+units+"/d)\n";
-    out += "\n"
-    out += "Total CCGT output: "+Math.round(total_CCGT_output/10)+" "+units+"/y\n"
-    out += "\n"
-    out += "-----------------------------------------------------------------\n"
-    out += "Final balance\n"
-    out += "-----------------------------------------------------------------\n"
-    out += "Total supply (electric + biomass): " + ((total_supply+biomass_requirement)/10).toFixed(1) + " "+units+"/y ("+((total_supply+biomass_requirement)/3650).toFixed(1)+" "+units+"/d)\n";
-    
-    var total_demand_all = total_demand + (10*aviation_miles / aviation_miles_per_kwh);
-    out += "Total demand (electric + aviation): " + (total_demand_all/10).toFixed(1) + " "+units+"/y ("+(total_demand_all/3650).toFixed(1)+" "+units+"/d)\n";
-    
-    out += "Total electricity supply: " + (total_supply/10).toFixed(1) + " "+units+"/y ("+(total_supply/3650).toFixed(1)+" "+units+"/d)\n";
-    out += "Total electricity demand: " + (total_demand/10).toFixed(1) + " "+units+"/y ("+(total_demand/3650).toFixed(1)+" "+units+"/d)\n";
-    out += "\n"
-    out += "Exess generation: " + (exess_generation/10).toFixed(0) + ""+units+"/y\n"
-    out += "Unmet elec demand: " + (unmet_demand/10).toFixed(0) + ""+units+"/y\n"
-    out += "Unmet demand at use: " + (unmet_demand_atuse/10).toFixed(0) + ""+units+"/y\n"
-    out += "\n"
-    out += "Percentage of demand supplied directly "+(prc_demand_supplied).toFixed(1)+"%\n"
-    out += "Percentage of time supply was more or the same as the demand "+(prc_time_met).toFixed(1)+"%\n"
-    out += "\n"
+    total_supply_inc_biomass = total_supply+biomass_requirement;
+    total_supply_inc_biomass_kwhd = total_supply_inc_biomass / 3650;
 
-        
-    $("#out").html(out);
+    total_demand_inc_aviation = total_demand+total_aviation_demand
+    total_demand_inc_aviation_kwhd = total_demand_inc_aviation / 3650;
+    
+    primary_energy_factor = total_supply_inc_biomass / total_demand_inc_aviation
+    
+    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses
     
     $(".modeloutput").each(function(){
         var key = $(this).attr("key");
         var dp = $(this).attr("dp");
-        $(this).html((1*window[key]).toFixed(dp));
+        var scale = $(this).attr("scale");
+        if (scale==undefined) scale = 1;
+        var units = $(this).attr("units");
+        if (units==undefined) units = ""; else units = " "+units;
+        $(this).html((1*window[key]*scale).toFixed(dp)+units);
     });
+    
+    var stacks = [
+      {"name":"Supply","height":total_supply_inc_biomass_kwhd,"saving":0,
+        "stack":[
+          {"kwhd":total_supply_inc_biomass_kwhd,"name":"Supply","color":1}
+        ]
+      },
+      {"name":"Supply","height":total_supply_inc_biomass_kwhd,"saving":0,
+        "stack":[
+          {"kwhd":total_offshore_wind_supply/3650,"name":"Offshore Wind","color":1},
+          {"kwhd":total_onshore_wind_supply/3650,"name":"Onshore Wind","color":1},
+          {"kwhd":total_solar_supply/3650,"name":"Solar PV","color":1},
+          {"kwhd":total_wave_supply/3650,"name":"Wave","color":1},
+          {"kwhd":total_tidal_supply/3650,"name":"Tidal","color":1},
+          {"kwhd":total_hydro_supply/3650,"name":"Hydro","color":1},
+          {"kwhd":total_nuclear_supply/3650,"name":"Nuclear","color":1},
+          {"kwhd":biomass_requirement/3650,"name":"Biomass","color":1}
+        ]
+      },
+      {"name":"Demand","height":total_demand_inc_aviation_kwhd,"saving":0,
+        "stack":[
+          {"kwhd":total_demand_inc_aviation_kwhd,"name":"Demand","color":0},
+          {"kwhd":total_losses/3650,"name":"Losses","color":2}
+        ]
+      },
+      {"name":"Demand","height":total_demand_inc_aviation_kwhd,"saving":0,
+        "stack":[
+          {"kwhd":total_trad_elec_demand/3650,"name":"LAC","color":0},
+          {"kwhd":total_heatpump_demand/3650,"name":"Heatpumps","color":0},
+          {"kwhd":total_EV_demand/3650,"name":"Electric Cars","color":0},
+          {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
+          {"kwhd":total_electrolysis_losses/3650,"name":"H2 losses","color":2},
+          {"kwhd":total_CCGT_losses/3650,"name":"CCGT losses","color":2},
+          {"kwhd":total_FT_losses/3650,"name":"FT losses","color":2},
+          {"kwhd":total_sabatier_losses/3650,"name":"Sabatier losses","color":2}
+        ]
+      }
+    ];
+    draw_stacks(stacks,"stacks",1000,600,"kWh/d")
+    
 }
 // ---------------------------------------------------------------------------    
 	
