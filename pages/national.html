@@ -108,6 +108,37 @@ View:
 </table>
 
 <br>
+<hr><h3>HOT WATER DEMAND</h3><hr>
+
+<table class="table" style="width:50%; float:left">
+<tr>
+    <td>Number of showers per day<br><span style="font-size:14px">(Based on 7.5 minute 9 kW shower)</span></td>
+    <td><input class="modelinput" key="number_showers_per_day" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+<tr>
+    <td>Number of baths per day<br><span style="font-size:14px">(Based on 20% higher water use than shower)</span></td>
+    <td><input class="modelinput" key="number_baths_per_day" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+<tr>
+    <td>Number of kitchen sink bowl fills per day<br><span style="font-size:14px">(Based on 70% fill of typical 9.5L bowl)</span></td>
+    <td><input class="modelinput" key="number_kitchen_sink" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+<tr>
+    <td>Number of bathroom sink fills per day</td>
+    <td><input class="modelinput" key="number_bathroom_sink" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+</table>
+<div style="float:left;">
+    <table style="font-size:14px">
+    <tr><td>Daily hot water demand</td><td><span class="modeloutput" key="DHW_daily_demand" dp=1 scale=1.0 units="kWh/d"></span></td></tr>
+    <tr><td>Annual hot water demand</td><td><span class="modeloutput" key="total_DHW_heat_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr><td>Annual heatpump electricity<br>demand for hot water</td><td><span class="modeloutput" key="total_DHW_heatpump_elec_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr><td>Daily heatpump electricity<br>demand for hot water</td><td><span class="modeloutput" key="total_DHW_heatpump_elec_demand_kwhd" dp=1 scale=1 units="kWh/d"></span></td></tr>
+    </table>
+</div>
+<div style="clear:both"></div>
+
+<br>
 <hr><h3>SPACE HEATING DEMAND</h3><hr>
 
 <table class="table" style="width:50%; float:left">
@@ -188,10 +219,6 @@ View:
     <td><input class="modelinput" key="target_internal_temperature" type="text" style="width:100px" value="" autocomplete="off"/></td>
 </tr>
 <tr>
-    <td>Solar gains capacity (kW)</td>
-    <td><input class="modelinput" key="solar_gains_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
-</tr>
-<tr>
     <td>Heatpump COP</td>
     <td><input class="modelinput" key="heatpump_COP" type="text" style="width:100px" value="" autocomplete="off"/></td>
 </tr>
@@ -202,13 +229,20 @@ View:
 </tr>
 </table>
 <div style="float:left;">
-    <p>Fabric heat loss: <span class="modeloutput" key="fabric_WK" dp=0 scale=1 units="W/K"></span></p>
-    <p>Infiltration heat loss: <span class="modeloutput" key="infiltration_WK" dp=0 scale=1 units="W/K"></span></p>
-    <p>Total fabric efficiency: <span class="modeloutput" key="total_WK" dp=0 scale=1 units="W/K"></span><br><br></p>
-    <p>Total space heating demand: <span class="modeloutput" key="total_heat_demand" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Used internal gains: <span class="modeloutput" key="used_internal_gains" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Used solar gains: <span class="modeloutput" key="used_solar_gains" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Total heatpump demand: <span class="modeloutput" key="total_heatpump_demand" dp=0 scale=0.1 units="kWh/y"></span></p>
+    <table style="font-size:14px">
+    <tr><td>Fabric heat loss</td><td><span class="modeloutput" key="fabric_WK" dp=0 scale=1 units="W/K"></span></td></tr>
+    <tr><td>Infiltration heat loss</td><td><span class="modeloutput" key="infiltration_WK" dp=0 scale=1 units="W/K"></span></td></tr>
+    <tr><td>Total fabric efficiency</td><td><span class="modeloutput" key="total_WK" dp=0 scale=1 units="W/K"></span></td></tr>
+    <tr><td></td><td></td></tr>
+    <tr><td>Total space heating demand</td><td><span class="modeloutput" key="total_heat_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr><td>- Used internal gains</td><td><span class="modeloutput" key="used_internal_gains" dp=0 scale=0.1 units="kWh/y"></span> of <span class="modeloutput" key="total_internal_gains" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr><td>- Used solar gains</td><td><span class="modeloutput" key="used_solar_gains" dp=0 scale=0.1 units="kWh/y"></span> of <span class="modeloutput" key="total_solar_gains" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    
+    <tr style="border-top:1px solid #aaa"><td>Total heatpump heat demand</td><td><span class="modeloutput" key="total_heatpump_heat_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr><td>Total heatpump electric demand</td><td><span class="modeloutput" key="total_heatpump_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr><td></td><td></td></tr>
+    <tr><td>Space heating heat demand<br>by floorarea</td><td><span class="modeloutput" key="spaceheatkwhm2" dp=0 scale=1 units="kWh/m2/y"></span></td></tr>
+    </table>
 </div>
 
 <div style="clear:both"></div>
@@ -352,5 +386,7 @@ View:
 <div style="clear:both"></div>
 
 <div id="stacks_bound" style="width:100%; height:600; position:relative;">
-<canvas id="stacks" width="600" height="600"></canvas>
+    <canvas id="stacks" width="600" height="600"></canvas>
 </div>
+
+<button id="auto_scale_supply">Auto scale supply</button>

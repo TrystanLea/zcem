@@ -37,8 +37,27 @@ function national_init()
     nuclear_capacity = 0.0
 
     // ---------------------------------------------------------------------------
-    traditional_electric = 2555
+    traditional_electric = 1642
     hourly_traditional_electric = traditional_electric / 8764.8
+
+    // ---------------------------------------------------------------------------
+    // Domestic Hot Water Demand
+    // ---------------------------------------------------------------------------
+    number_showers_per_day = 1.5
+    number_baths_per_day = 0.8
+    number_kitchen_sink = 2.0
+    number_bathroom_sink = 1.0
+    
+    shower_kwh = 1.125 // 7.5 mins at 9kW
+    bath_kwh = 1.35   // uses 20% more water than shower at same temperature
+    sink_kwh = 0.3   // 6.3L × 40K × 4200 (assuming 50C water, 70% of typical bowl)
+        
+    // Similar too: https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/48188/3147-measure-domestic-hot-water-consump.pdf
+    DHW_profile = [2,1,1,1,1,1,3,7,23,24,23,14,13,4,2,3,4,2,3,4,4,6,7,6];
+    // Normalise
+    var DHW_profile_sum = 0
+    for (var z in DHW_profile) DHW_profile_sum += DHW_profile[z]
+    for (var z in DHW_profile) DHW_profile[z] = DHW_profile[z] / DHW_profile_sum
 
     // ---------------------------------------------------------------------------
     // Space heating variables
@@ -51,8 +70,7 @@ function national_init()
     glazing_extent = 0.2
     air_change_per_hour = 1.0
    
-    target_internal_temperature = 18.4
-    solar_gains_capacity = 5.0           // 5kW = average of about 500W from MyHomeEnergyPlanner model
+    target_internal_temperature = 18.0
     heatpump_COP = 3.0
 
     heatstore_capacity = 10
@@ -121,12 +139,25 @@ function national_run()
  
  
     total_trad_elec_demand = 0
+
+    // DHW Demand
+    DHW_daily_demand = 0
+    DHW_daily_demand += (shower_kwh * number_showers_per_day)
+    DHW_daily_demand += (bath_kwh * number_baths_per_day)
+    DHW_daily_demand += (sink_kwh * number_kitchen_sink)
+    DHW_daily_demand += (sink_kwh * number_bathroom_sink)
+    
+    total_DHW_heat_demand = 0
+    total_DHW_heatpump_elec_demand = 0
+    
     total_EV_demand = 0
     total_heat_demand = 0
     total_internal_gains_unused = 0
     total_solar_gains = 0
     total_solar_gains_unused = 0
     total_heating_demand = 0
+    
+    total_heatpump_heat_demand = 0
     total_heatpump_demand = 0
     
     average_temperature = 0
@@ -195,6 +226,8 @@ function national_run()
     windows_west = total_window_area * 0.2
     windows_east = total_window_area * 0.2
     windows_north = total_window_area * 0.2
+    
+    solar_gains_capacity = total_window_area / 3.0
 
     floor_WK = floor_uvalue * floor_area
     loft_WK = loft_uvalue * floor_area
@@ -267,7 +300,20 @@ function national_run()
         balance -= tradelec
         demand += tradelec
         total_trad_elec_demand += tradelec
+
+        // ---------------------------------------------------------------------------
+        // Hot water demand
+        // ---------------------------------------------------------------------------
+
+        DHW_demand = DHW_profile[hour%24] * DHW_daily_demand
+        DHW_heatpump_elec_demand = DHW_demand / heatpump_COP
+
+        balance -= DHW_heatpump_elec_demand
+        demand += DHW_heatpump_elec_demand
         
+        total_DHW_heat_demand += DHW_demand
+        total_DHW_heatpump_elec_demand += DHW_heatpump_elec_demand
+
         // ---------------------------------------------------------------------------
         // Space Heating
         // ---------------------------------------------------------------------------
@@ -320,6 +366,7 @@ function national_run()
         balance -= heatpump_electricity_demand
         demand += heatpump_electricity_demand
         total_heatpump_demand += heatpump_electricity_demand
+        total_heatpump_heat_demand += heating_demand
         
         // ---------------------------------------------------------------------------
         // Electric vehicles
@@ -437,6 +484,7 @@ function national_run()
             balance -= heatpump_electricity_demand_heatstore;
             demand += heatpump_electricity_demand_heatstore
             total_heatpump_demand += heatpump_electricity_demand_heatstore
+            total_heatpump_heat_demand += heatstore_charge
         }
         
         // ---------------------------------------------------------------------------
@@ -646,6 +694,9 @@ function national_run()
         // d5.push([hour,EV_charge_rate_suppliment+EV_charge_rate]);
     }
     
+    total_DHW_heatpump_elec_demand_kwhd = total_DHW_heatpump_elec_demand / 3650
+    spaceheatkwhm2 = (total_heatpump_heat_demand*0.1) / total_floor_area
+    
     var biomass_landarea_factor = ((1.0/3650)/0.024) / 0.7;
     
     total_H2_produced = total_electrolysis_demand * 0.7
@@ -665,7 +716,9 @@ function national_run()
     average_temperature = average_temperature / hours
 
     used_solar_gains = total_solar_gains - total_solar_gains_unused
-    used_internal_gains = (traditional_electric*10) - total_internal_gains_unused
+    
+    total_internal_gains = traditional_electric*10
+    used_internal_gains = total_internal_gains - total_internal_gains_unused
 
     prc_demand_supplied = ((total_demand - unmet_demand) / total_demand) * 100
     prc_time_met = (1.0 * hours_met / hours) * 100
@@ -708,16 +761,16 @@ function national_run()
           {"kwhd":biomass_requirement/3650,"name":"Biomass","color":1}
         ]
       },
-      {"name":"Demand","height":total_demand_inc_aviation_kwhd,"saving":0,
+      {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650),"saving":0,
         "stack":[
           {"kwhd":total_demand_inc_aviation_kwhd,"name":"Demand","color":0},
           {"kwhd":total_losses/3650,"name":"Losses","color":2}
         ]
       },
-      {"name":"Demand","height":total_demand_inc_aviation_kwhd,"saving":0,
+      {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650),"saving":0,
         "stack":[
           {"kwhd":total_trad_elec_demand/3650,"name":"LAC","color":0},
-          {"kwhd":total_heatpump_demand/3650,"name":"Heatpumps","color":0},
+          {"kwhd":(total_heatpump_demand+total_DHW_heatpump_elec_demand)/3650,"name":"Heatpumps","color":0},
           {"kwhd":total_EV_demand/3650,"name":"Electric Cars","color":0},
           {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
           {"kwhd":total_electrolysis_losses/3650,"name":"H2 losses","color":2},
@@ -728,6 +781,19 @@ function national_run()
       }
     ];
     draw_stacks(stacks,"stacks",1000,600,"kWh/d")
+    
+    $("#auto_scale_supply").click(function(){
+        var total_demand = total_demand_inc_aviation_kwhd + (total_losses/3650);
+        var scale = total_demand / total_supply_inc_biomass_kwhd
+        
+        onshorewind_capacity *= scale
+        offshorewind_capacity *= scale
+        solarpv_capacity *= scale
+        hydro_capacity *= scale
+        wave_capacity *= scale
+        tidal_capacity *= scale
+        nuclear_capacity *= scale
+    });
     
 }
 // ---------------------------------------------------------------------------    
