@@ -127,6 +127,11 @@ $("#model").on("click",".view-source",function(){
     }
 });
 
+$("#model").on("click",".box-title",function(){
+   var box = $(this).parent().find(".inner");
+   if (box.is(":visible")) box.hide(); else box.show();
+});
+
 </script>
 
 

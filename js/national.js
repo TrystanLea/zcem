@@ -25,21 +25,29 @@
 
 function national_init()
 {
+    unitsmode = "kwhd"
     // ---------------------------------------------------------------------------
     // dataset index:
     // 0:onshore wind, 1:offshore wind, 2:wave, 3:tidal, 4:solar, 5:traditional electricity
-    onshorewind_capacity = 1.92
+    onshorewind_capacity = 1.93
     offshorewind_capacity = 0.0
-    solarpv_capacity = 1.92
+    solarpv_capacity = 1.93
     hydro_capacity = 0.0
     wave_capacity = 0.0
     tidal_capacity = 0.0
     nuclear_capacity = 0.0
-
+    grid_loss_prc = 0.05
+    
     // ---------------------------------------------------------------------------
     traditional_electric = 1642
     hourly_traditional_electric = traditional_electric / 8764.8
-
+    
+    //                 0 1 2 3 4 5 6 7 8 9 0 1 2 1 2 3 4 5 6 7 8 9 0 1
+    cooking_profile = [0,0,0,0,0,1,3,6,7,5,2,3,5,6,2,1,2,3,5,7,6,4,2,1];
+    // Normalise
+    var cooking_profile_sum = 0
+    for (var z in cooking_profile) cooking_profile_sum += cooking_profile[z]
+    for (var z in cooking_profile) cooking_profile[z] = cooking_profile[z] / cooking_profile_sum
     // ---------------------------------------------------------------------------
     // Domestic Hot Water Demand
     // ---------------------------------------------------------------------------
@@ -71,6 +79,7 @@ function national_init()
     air_change_per_hour = 1.0
    
     target_internal_temperature = 18.0
+    night_time_setback = 16.0
     heatpump_COP = 3.0
 
     heatstore_capacity = 10
@@ -93,6 +102,8 @@ function national_init()
     EV_miles_day = 0; for (h in EV_use_profile) EV_miles_day += EV_use_profile[h]
     // Normalise
     for (h in EV_use_profile) EV_use_profile[h] = (EV_use_profile[h] / EV_miles_day)
+    
+    charge_type = "smartcharge"
 
     // ---------------------------------------------------------------------------
     liion_capacity = 0
@@ -116,7 +127,10 @@ function national_init()
     
     // Aviation
     aviation_miles_per_kwh = 1.3  // passenger miles per kwh based on 50 kWh per 100p/km
-    aviation_miles = 1200 
+    aviation_miles = 1200
+    
+    ebike_annual_miles = 2000
+    ebike_miles_per_kwh = 66
     
     view_mode = "supplydemand"
     
@@ -126,6 +140,7 @@ function national_init()
 }
 function national_run()
 {
+    // Supply ----------------------------------------------
     total_offshore_wind_supply = 0
     total_onshore_wind_supply = 0
     total_solar_supply = 0
@@ -134,10 +149,11 @@ function national_run()
     total_hydro_supply = 0
     total_nuclear_supply = 0
     
+    total_grid_losses = 0
+    
     total_supply = 0
     total_demand = 0
- 
- 
+    
     total_trad_elec_demand = 0
 
     // DHW Demand
@@ -150,30 +166,44 @@ function national_run()
     total_DHW_heat_demand = 0
     total_DHW_heatpump_elec_demand = 0
     
-    total_EV_demand = 0
-    total_heat_demand = 0
+    // Space heating ---------------------------------------
+    average_temperature = 0
+    
+    total_space_heating_demand_before_gains = 0
+    total_final_space_heating_demand = 0
+    
+    total_metabolic_gains = 0
+    total_metabolic_gains_unused = 0
+    
+    total_internal_gains = 0
     total_internal_gains_unused = 0
+    
     total_solar_gains = 0
     total_solar_gains_unused = 0
-    total_heating_demand = 0
+    
+    total_space_heating_demand = 0
     
     total_heatpump_heat_demand = 0
-    total_heatpump_demand = 0
+    total_heatpump_elec_demand = 0
     
-    average_temperature = 0
+    // Electric Vehicles ------------------------------------
+    total_EV_demand = 0
+    total_miles_driven = 0
+    total_ebike_demand = 0
 
+    // Lithium Ion ------------------------------------------
+    total_liion_charge = 0
+    total_liion_discharge = 0
+    
+    // Electrolysis -----------------------------------------
+    total_electrolysis_demand = 0
+    total_electrolysis_losses = 0
+    total_fuel_cell_output = 0
+    
     exess_generation = 0
     unmet_demand = 0
     unmet_demand_atuse = 0
     hours_met = 0
-    total_miles_driven = 0
-    
-    total_liion_charge = 0
-    total_liion_discharge = 0
-    
-    total_electrolysis_demand = 0
-    total_electrolysis_losses = 0
-    total_fuel_cell_output = 0
     
     biomass_requirement = 0
     total_synthfuel_production = 0
@@ -183,6 +213,7 @@ function national_run()
     total_unmet_before_CCGT = 0
     total_CCGT_losses = 0
     
+    // Stores -----------------------------------------------
     H2_store_level = 0
     liquid_store_level = 50
     methane_store_level = 300
@@ -200,14 +231,14 @@ function national_run()
     data[2] = [];
     data[3] = [];
     data[4] = [];
-
+    data[5] = [];
+    data[6] = [];
     // ---------------------------------------------------------------------------------------------  
     // Building energy model
     // ---------------------------------------------------------------------------------------------
-    // 2. Metabolic gains
     // 3. Solar gains calculator from window areas and orientations
-    
     // 4. Seperate out cooking, lighting and appliances and water heating demand.
+    
     floor_area = total_floor_area / 2.0 
     side = Math.sqrt(floor_area)
          
@@ -277,7 +308,6 @@ function national_run()
         solarpv = capacityfactors[4] * solarpv_capacity
         hydro = 0.4 * hydro_capacity // Assuming 40% capacity factor
         nuclear = 0.9 * nuclear_capacity // Assuming 90% uptime
-        
         supply = onshorewind + offshorewind + solarpv + wave + tidal + hydro + nuclear
         total_supply += supply
 
@@ -288,31 +318,63 @@ function national_run()
         total_tidal_supply += tidal
         total_hydro_supply += hydro
         total_nuclear_supply += nuclear
-
-        balance = supply
+        
+        // Grid losses
+        supply_after_grid_loss = supply * (1.0-grid_loss_prc)
+        total_grid_losses += supply * grid_loss_prc
+        
+        balance = supply_after_grid_loss
         demand = 0
 
         // ---------------------------------------------------------------------------
         // Traditional electricity demand
         // ---------------------------------------------------------------------------
-        trad_demand_factor = capacityfactors[5] / total_trad_demand
-        tradelec = trad_demand_factor * traditional_electric * 10
+        // trad_demand_factor = capacityfactors[5] / total_trad_demand
+        // tradelec = trad_demand_factor * traditional_electric * 10
+        tradelec = 0
+
+        // Lighting model        
+        number_of_lights = 10
+        lights_power = 11
+        
+        lighting_demand = number_of_lights * lights_power * 0.001
+        lighting_demand -= parseFloat(capacityfactors[4])*0.15
+        if (lighting_demand<0) lighting_demand = 0
+        if ((hour%24)>23) lighting_demand *= 0.1
+        if ((hour%24)<7) lighting_demand *= 0.1
+        tradelec += lighting_demand
+        
+        // Fridge + freezer                 0.72 kWh/d
+        tradelec += 262.0 / 8760
+        // Washing machine                  0.34 kWh/d
+        tradelec += 136.0 / 8760          
+        // internet router 7W continuous    0.17 kWh/d
+        tradelec += 7.0 * 0.001
+        // Cooking                          1.1 kWh/d
+        tradelec += 1.1 * cooking_profile[hour%24]
+        // Laptop                           0.58 kWh/d
+        tradelec += (0.29 * 2) / 24.0
+        
         balance -= tradelec
         demand += tradelec
         total_trad_elec_demand += tradelec
-
+        
         // ---------------------------------------------------------------------------
         // Hot water demand
         // ---------------------------------------------------------------------------
+        heatpump_heat_demand = 0
 
         DHW_demand = DHW_profile[hour%24] * DHW_daily_demand
-        DHW_heatpump_elec_demand = DHW_demand / heatpump_COP
-
-        balance -= DHW_heatpump_elec_demand
-        demand += DHW_heatpump_elec_demand
-        
         total_DHW_heat_demand += DHW_demand
-        total_DHW_heatpump_elec_demand += DHW_heatpump_elec_demand
+        
+        // Pull heat from heatstore if available
+        if ((heatstore-DHW_demand)>=0) {
+            heatstore -= DHW_demand
+        } else {
+            DHW_demand -= heatstore
+            heatpump_heat_demand += DHW_demand
+            heatstore = 0
+        }
 
         // ---------------------------------------------------------------------------
         // Space Heating
@@ -320,53 +382,77 @@ function national_run()
         // External temperature        
         average_temperature += temperature
         
-        // 1) Total heat demand
-        deltaT = target_internal_temperature - temperature
-        heating_demand = fabric_efficiency * deltaT
-        
-        if (heating_demand>0) {
-            total_heat_demand += heating_demand
+        // 1) Total heat demand 
+        // night time set back 1am to 6am
+        if (hour%24>=1 && hour%24<6) {
+            deltaT = night_time_setback - temperature
         } else {
-            heating_demand = 0
+            deltaT = target_internal_temperature - temperature
         }
-            
-        // 2) Subtract estimate for other internal gains
-        if ((heating_demand-tradelec)>=0) {
-            heating_demand -= tradelec
+        space_heating_demand = fabric_efficiency * deltaT
+        
+        if (space_heating_demand<0) space_heating_demand = 0
+        total_space_heating_demand_before_gains += space_heating_demand
+        
+        //                av person x occupancy x presence x kwh
+        metabolic_gains = 80 * 2.41 * 0.2 * 0.001
+        total_metabolic_gains += metabolic_gains
+        
+        if ((space_heating_demand-metabolic_gains)>=0) {
+            space_heating_demand -= metabolic_gains
         } else {
-            total_internal_gains_unused += (tradelec - heating_demand)
-            heating_demand = 0
+            total_metabolic_gains_unused += (metabolic_gains - space_heating_demand)
+            space_heating_demand = 0
+        }
+        
+        internal_gains = (tradelec * 0.7) + (DHW_demand * 0.3) // 80% utilisation factor
+        total_internal_gains += internal_gains
+        // 2) Subtract estimate for other internal gains
+        if ((space_heating_demand-tradelec)>=0) {
+            space_heating_demand -= tradelec
+        } else {
+            total_internal_gains_unused += (tradelec - space_heating_demand)
+            space_heating_demand = 0
         }
             
         // 3) Calc solar gains and subtract from heat demand
         solar_gains = parseFloat(capacityfactors[4]) * solar_gains_capacity
         total_solar_gains += solar_gains
         
-        if ((heating_demand-solar_gains)>=0) {
-            heating_demand -= solar_gains
+        if ((space_heating_demand-solar_gains)>=0) {
+            space_heating_demand -= solar_gains
         } else {
-            total_solar_gains_unused += (solar_gains - heating_demand)
-            heating_demand = 0
+            total_solar_gains_unused += (solar_gains - space_heating_demand)
+            space_heating_demand = 0
         }
             
-        total_heating_demand += heating_demand
-        
-        if (heatstore>heating_demand) {
-            heatstore_discharge = heating_demand;
-            heatstore -= heatstore_discharge;
-            heating_demand = 0;
+        total_final_space_heating_demand += space_heating_demand
+
+        // Pull heat from heatstore if available
+        if ((heatstore-space_heating_demand)>=0) {
+            heatstore -= space_heating_demand
+            space_heating_demand = 0
         } else {
-            heating_demand -= heatstore;
-            heatstore_discharge = heatstore;
-            heatstore = 0;
+            space_heating_demand -= heatstore
+            heatpump_heat_demand += space_heating_demand
+            heatstore = 0
         }
         
-        heatpump_electricity_demand = heating_demand / heatpump_COP
+        heatpump_elec_demand = heatpump_heat_demand / heatpump_COP
 
-        balance -= heatpump_electricity_demand
-        demand += heatpump_electricity_demand
-        total_heatpump_demand += heatpump_electricity_demand
-        total_heatpump_heat_demand += heating_demand
+        balance -= heatpump_elec_demand
+        demand += heatpump_elec_demand
+        total_heatpump_elec_demand += heatpump_elec_demand
+        total_heatpump_heat_demand += heatpump_heat_demand
+
+        // ---------------------------------------------------------------------------
+        // TRANSPORT
+        // ---------------------------------------------------------------------------        
+        ebike_annual_demand = ebike_annual_miles / ebike_miles_per_kwh
+        ebike_hourly_demand = ebike_annual_demand / 3650
+        balance -= ebike_hourly_demand
+        demand += ebike_hourly_demand
+        total_ebike_demand += ebike_hourly_demand
         
         // ---------------------------------------------------------------------------
         // Electric vehicles
@@ -387,83 +473,95 @@ function national_run()
         miles = EV_discharge * EV_miles_per_kwh
         total_miles_driven += miles
 
-        // Smart charge based on forecast of available supply over the next 24 hours
-        // if the available supply is more than the demand then the charge rate can 
-        // be reduced. If there was twice as much supply forecast than demand then the
-        // rate of charge could by dropped to half the available supply in order to 
-        // distribute the charge better across the 24h.
-        EV_kWhd = EV_miles_day / EV_miles_per_kwh
-        
-        forecast = 0
-        forecast += supply
-        forward = 24
-        
-        for (var h=1; h<forward; h++) {
-            if ((hour+h)<hours-1) {
-                onshorewind_forecast = capacityfactors_all[hour+h][0] * onshorewind_capacity
-                offshorewind_forecast = capacityfactors_all[hour+h][1] * offshorewind_capacity
-                solarpv_forecast = capacityfactors_all[hour+h][4] * solarpv_capacity
-                supply_forecast = onshorewind_forecast + offshorewind_forecast + solarpv_forecast
-                forecast += supply_forecast
-            }
-        }
-        demand_forecast = ((EV_battery_capacity*0.65)-EV_SOC)+(EV_kWhd*(forward/24))
-        EV_charge_rate_reducer = demand_forecast / forecast
-        if (EV_charge_rate_reducer>1.0) EV_charge_rate_reducer = 1.0
-        
-        EV_SOC_prc = EV_SOC / EV_battery_capacity
-        
-        EV_charge_rate = 0
-        if (balance>0) {
-            if ((EV_SOC+balance)>(EV_battery_capacity*0.8)) {
-                EV_charge_rate = (EV_battery_capacity*0.8) - EV_SOC
-            } else {
-                EV_charge_rate = balance
-            }
-            //if (EV_SOC_prc>0.3)
-            //    EV_charge_rate_reducer = 1.0 - (EV_SOC_prc*0.8)
-            EV_charge_rate *= EV_charge_rate_reducer
-        }
-        //EV_charge_rate = 0
-        
-        EV_charge_rate_suppliment = 0
-        if ((EV_SOC<(0.2*EV_battery_capacity)) && EV_charge_rate<0.3) {
-            EV_charge_rate_suppliment = 0.3 - EV_charge_rate
-        }
+        if (charge_type=="smartcharge")
+        {
+            // Smart charge based on forecast of available supply over the next 24 hours
+            // if the available supply is more than the demand then the charge rate can 
+            // be reduced. If there was twice as much supply forecast than demand then the
+            // rate of charge could by dropped to half the available supply in order to 
+            // distribute the charge better across the 24h.
+            EV_kWhd = EV_miles_day / EV_miles_per_kwh
             
-        EV_SOC += (EV_charge_rate + EV_charge_rate_suppliment)
-        
-        balance -= EV_charge_rate
-        balance -= EV_charge_rate_suppliment
+            forecast = 0 
+            forecast += supply
+            forward = 24
             
-        demand += EV_charge_rate   
-        demand += EV_charge_rate_suppliment
+            for (var h=1; h<forward; h++) {
+                if ((hour+h)<hours-1) {
+                    onshorewind_forecast = capacityfactors_all[hour+h][0] * onshorewind_capacity
+                    offshorewind_forecast = capacityfactors_all[hour+h][1] * offshorewind_capacity
+                    solarpv_forecast = capacityfactors_all[hour+h][4] * solarpv_capacity
+                    supply_forecast = onshorewind_forecast + offshorewind_forecast + solarpv_forecast
+                    forecast += supply_forecast
+                }
+            }
+            demand_forecast = ((EV_battery_capacity*0.65)-EV_SOC)+(EV_kWhd*(forward/24))
+            EV_charge_rate_reducer = demand_forecast / forecast
+            if (EV_charge_rate_reducer>1.0) EV_charge_rate_reducer = 1.0
+            
+            EV_SOC_prc = EV_SOC / EV_battery_capacity
+            
+            EV_charge_rate = 0
+            if (balance>0) {
+                if ((EV_SOC+balance)>(EV_battery_capacity*0.8)) {
+                    EV_charge_rate = (EV_battery_capacity*0.8) - EV_SOC
+                } else {
+                    EV_charge_rate = balance
+                }
+                //if (EV_SOC_prc>0.3)
+                //    EV_charge_rate_reducer = 1.0 - (EV_SOC_prc*0.8)
+                EV_charge_rate *= EV_charge_rate_reducer
+            }
+            //EV_charge_rate = 0
+            
+            EV_charge_rate_suppliment = 0
+            if ((EV_SOC<(0.2*EV_battery_capacity)) && EV_charge_rate<0.3) {
+                EV_charge_rate_suppliment = 0.3 - EV_charge_rate
+            }
+                
+            EV_SOC += (EV_charge_rate + EV_charge_rate_suppliment)
+            
+            balance -= EV_charge_rate
+            balance -= EV_charge_rate_suppliment
+                
+            demand += EV_charge_rate   
+            demand += EV_charge_rate_suppliment
+        }
+        else
+        {
+            // Simple night time charge alternative
+            
+            EV_kWhd = EV_miles_day / EV_miles_per_kwh
+            // Manual charge profile set to night time charging
+            //                                           1 1 1                   1 1
+            //                       0 1 2 3 4 5 6 7 8 9 0 1 2 1 2 3 4 5 6 7 8 9 0 1
+            if (charge_type=="constantcharge")
+                EV_charge_profile = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            if (charge_type=="nightcharge")
+                EV_charge_profile = [0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            if (charge_type=="morenight")
+                EV_charge_profile = [1,4,4,4,4,4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            if (charge_type=="moreday")
+                EV_charge_profile = [1,1,1,1,1,1,1,1,2,2,3,3,4,4,4,3,3,2,1,1,1,1,1,1]
+            // Calcuate profile factor
+            EV_profile_factor = 0
+            for (h in EV_charge_profile) EV_profile_factor += EV_charge_profile[h]
+            EV_profile_scale = EV_kWhd / EV_profile_factor
+            
+            EV_charge_rate = EV_charge_profile[hour%24] * EV_profile_scale
+            
+            if ((EV_SOC+EV_charge_rate)>EV_battery_capacity) {
+                EV_charge_rate = EV_battery_capacity - EV_SOC
+            }
+                
+            EV_SOC += EV_charge_rate
+            balance -= EV_charge_rate
+            demand += EV_charge_rate
+        }
+        
         total_EV_demand += EV_charge_rate
         total_EV_demand += EV_charge_rate_suppliment
-        /*
-        // Simple night time charge alternative
-        
-        EV_kWhd = EV_miles_day / EV_miles_per_kwh
-        // Manual charge profile set to night time charging
-        //                                        1 1 1                   1 1
-        //                    0 1 2 3 4 5 6 7 8 9 0 1 2 1 2 3 4 5 6 7 8 9 0 1
-        EV_charge_profile = [0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-        
-        // Calcuate profile factor
-        EV_profile_factor = 0
-        for (h in EV_charge_profile) EV_profile_factor += EV_charge_profile[h]
-        EV_profile_scale = EV_kWhd / EV_profile_factor
-        
-        EV_charge_rate = EV_charge_profile[hour%24] * EV_profile_scale
-        
-        if ((EV_SOC+EV_charge_rate)>EV_battery_capacity) {
-            EV_charge_rate = EV_battery_capacity - EV_SOC
-        }
-            
-        EV_SOC += EV_charge_rate
-        balance -= EV_charge_rate
-        demand += EV_charge_rate
-        */
+
         // ---------------------------------------------------------------------------
         // Heatstore remaining supply
         // ---------------------------------------------------------------------------
@@ -483,7 +581,7 @@ function national_run()
             
             balance -= heatpump_electricity_demand_heatstore;
             demand += heatpump_electricity_demand_heatstore
-            total_heatpump_demand += heatpump_electricity_demand_heatstore
+            total_heatpump_elec_demand += heatpump_electricity_demand_heatstore
             total_heatpump_heat_demand += heatstore_charge
         }
         
@@ -643,8 +741,9 @@ function national_run()
         // ---------------------------------------------------------------------------
         if (balance<0) {
             total_unmet_before_CCGT += -balance
-        
             CCGT_output = -balance
+            CCGT_output = CCGT_output / (1.0-grid_loss_prc)
+            
             if (CCGT_output>CCGT_capacity) CCGT_output = CCGT_capacity
             
             CCGT_methane = CCGT_output / 0.5
@@ -655,6 +754,8 @@ function national_run()
             }
             
             CCGT_output = CCGT_methane * 0.5
+            CCGT_output = CCGT_output * (1.0-grid_loss_prc)
+            total_grid_losses += CCGT_output * grid_loss_prc
             
             methane_store_level -= CCGT_methane
             balance += CCGT_output
@@ -680,31 +781,32 @@ function national_run()
         var time = datastarttime + (hour * 3600 * 1000);
         data[0].push([time,supply]);
         data[1].push([time,tradelec]);
-        data[2].push([time,tradelec+heatpump_electricity_demand+heatpump_electricity_demand_heatstore]);
-        data[3].push([time,tradelec+heatpump_electricity_demand+heatpump_electricity_demand_heatstore+EV_charge_rate]);
-        data[4].push([time, 100*(EV_SOC/EV_battery_capacity)]);
-        // data[2].push([time,heating_demand+heatstore_discharge]);
-        
-        // d1.push([hour,100*(liion_SOC/liion_capacity)]); // 100*(EV_SOC/24)
-        //d1.push([hour, 100*(EV_SOC/24)]); // 100*(EV_SOC/24)
-        //d2.push([hour,supply]);
-        //d3.push([hour,tradelec]);
-        //d4.push([hour,heatpump_electricity_demand+heatpump_electricity_demand_heatstore]);
-        //d5.push([hour,EV_charge_rate]);
-        // d5.push([hour,EV_charge_rate_suppliment+EV_charge_rate]);
+        data[2].push([time,tradelec]);
+        data[3].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore]);
+        data[4].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore+EV_charge_rate]);
+        data[5].push([time, 100*(EV_SOC/EV_battery_capacity)]);
+        data[6].push([time, methane_store_level]);
     }
     
-    total_DHW_heatpump_elec_demand_kwhd = total_DHW_heatpump_elec_demand / 3650
-    spaceheatkwhm2 = (total_heatpump_heat_demand*0.1) / total_floor_area
+    // Heating ---------------------------------------------------------------------
+    average_temperature = average_temperature / hours
+
+    used_metabolic_gains = total_metabolic_gains - total_metabolic_gains_unused
+    used_solar_gains = total_solar_gains - total_solar_gains_unused
+    used_internal_gains = total_internal_gains - total_internal_gains_unused
     
-    var biomass_landarea_factor = ((1.0/3650)/0.024) / 0.7;
+    DHW_heatpump_demand = total_DHW_heat_demand / heatpump_COP
+    space_heating_heatpump_demand = total_final_space_heating_demand / heatpump_COP
+    spaceheatkwhm2 = (total_final_space_heating_demand*0.1) / total_floor_area
     
+    // Biomass and synthetic fuels -------------------------------------------------
+    biomass_landarea_factor = ((1.0/3650)/0.024) / 0.7;
     total_H2_produced = total_electrolysis_demand * 0.7
     biomass_for_synthfuel = total_synthfuel_production / 0.8
     hydrogen_for_synthfuel = biomass_for_synthfuel * 0.5
     landarea_for_synthfuel = biomass_for_synthfuel * biomass_landarea_factor
     prc_landarea_for_synthfuel = 100 * landarea_for_synthfuel / 1160
-
+   
     biomass_for_methane = total_methane_production
     hydrogen_for_methane = biomass_for_methane * 0.5
     landarea_for_methane = biomass_for_methane * biomass_landarea_factor
@@ -713,13 +815,7 @@ function national_run()
     biomass_m2 = biomass_requirement * biomass_landarea_factor
     prc_landarea_for_biomass = 100 * biomass_m2 / 1160
     
-    average_temperature = average_temperature / hours
-
-    used_solar_gains = total_solar_gains - total_solar_gains_unused
-    
-    total_internal_gains = traditional_electric*10
-    used_internal_gains = total_internal_gains - total_internal_gains_unused
-
+    // Overall supply / demand matching -------------------------------------------
     prc_demand_supplied = ((total_demand - unmet_demand) / total_demand) * 100
     prc_time_met = (1.0 * hours_met / hours) * 100
 
@@ -731,16 +827,35 @@ function national_run()
     
     primary_energy_factor = total_supply_inc_biomass / total_demand_inc_aviation
     
-    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses
+    
+    total_exess = exess_generation + methane_store_level + liquid_store_level + H2_store_level
+    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses
+    
+    
     
     $(".modeloutput").each(function(){
+        var type = $(this).attr("type");
         var key = $(this).attr("key");
         var dp = $(this).attr("dp");
         var scale = $(this).attr("scale");
-        if (scale==undefined) scale = 1;
         var units = $(this).attr("units");
-        if (units==undefined) units = ""; else units = " "+units;
-        $(this).html((1*window[key]*scale).toFixed(dp)+units);
+        
+        if (type==undefined) {
+            if (scale==undefined) scale = 1;
+            if (units==undefined) units = ""; else units = " "+units;
+        } else if(type=="10y") {
+            if (unitsmode=="kwhd") {
+                scale = 1.0 / 3650
+                units = " kWh/d"
+                dp = 1
+            } else if (unitsmode=="kwhy") {
+                scale = 1.0 / 10
+                units = " kWh/y"
+                dp = 0
+            }
+        }
+        
+        $(this).html("<span>"+(1*window[key]*scale).toFixed(dp)+"</span><span style='font-size:90%'>"+units+"</span>");
     });
     
     var stacks = [
@@ -764,37 +879,27 @@ function national_run()
       {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650),"saving":0,
         "stack":[
           {"kwhd":total_demand_inc_aviation_kwhd,"name":"Demand","color":0},
-          {"kwhd":total_losses/3650,"name":"Losses","color":2}
+          {"kwhd":total_losses/3650,"name":"Losses","color":2},
+          {"kwhd":total_exess/3650,"name":"Exess","color":3}
         ]
       },
       {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650),"saving":0,
         "stack":[
           {"kwhd":total_trad_elec_demand/3650,"name":"LAC","color":0},
-          {"kwhd":(total_heatpump_demand+total_DHW_heatpump_elec_demand)/3650,"name":"Heatpumps","color":0},
+          {"kwhd":total_heatpump_elec_demand/3650,"name":"Heatpumps","color":0},
           {"kwhd":total_EV_demand/3650,"name":"Electric Cars","color":0},
           {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
+          {"kwhd":total_ebike_demand/3650,"name":"E-Bikes","color":0},
           {"kwhd":total_electrolysis_losses/3650,"name":"H2 losses","color":2},
           {"kwhd":total_CCGT_losses/3650,"name":"CCGT losses","color":2},
           {"kwhd":total_FT_losses/3650,"name":"FT losses","color":2},
-          {"kwhd":total_sabatier_losses/3650,"name":"Sabatier losses","color":2}
+          {"kwhd":total_sabatier_losses/3650,"name":"Sabatier losses","color":2},
+          {"kwhd":total_grid_losses/3650,"name":"Grid losses","color":2},
+          {"kwhd":total_exess/3650,"name":"Exess","color":3}
         ]
       }
     ];
-    draw_stacks(stacks,"stacks",1000,600,"kWh/d")
-    
-    $("#auto_scale_supply").click(function(){
-        var total_demand = total_demand_inc_aviation_kwhd + (total_losses/3650);
-        var scale = total_demand / total_supply_inc_biomass_kwhd
-        
-        onshorewind_capacity *= scale
-        offshorewind_capacity *= scale
-        solarpv_capacity *= scale
-        hydro_capacity *= scale
-        wave_capacity *= scale
-        tidal_capacity *= scale
-        nuclear_capacity *= scale
-    });
-    
+    draw_stacks(stacks,"stacks",1000,600,"kWh/d")    
 }
 // ---------------------------------------------------------------------------    
 	
@@ -805,21 +910,23 @@ function national_view(start,end,interval)
     if (view_mode=="supplydemand")
     {
         $.plot("#placeholder", [
-
+            {label: "Methane Store", data:dataout[6], yaxis:3, color:"#ccaa00", lines: {lineWidth:0, fill: 0.2 }},
             // tradelec + heatpump + ev
-            {label: "EV charging demand", data:dataout[3], yaxis:1, color:"#aac15b", lines: {lineWidth:0, fill: 1.0 }}, 
+            {label: "EV charging demand", data:dataout[4], yaxis:1, color:"#aac15b", lines: {lineWidth:0, fill: 1.0 }}, 
             // tradelec + heatpump
-            {label: "Heatpump electric demand", data:dataout[2], yaxis:1, color:"#cc4400", lines: {lineWidth:0, fill: 1.0 }},
+            {label: "Heatpump electric demand", data:dataout[3], yaxis:1, color:"#cc6622", lines: {lineWidth:0, fill: 1.0 }},
+            {label: "DHW Heatpump electric demand", data:dataout[2], yaxis:1, color:"#cc4400", lines: {lineWidth:0, fill: 1.0 }},
             // tradelec
             {label: "Traditional electric demand", data:dataout[1], yaxis:1, color:"#00aacc", lines: {lineWidth:0, fill: 1.0 }}, 
             // EV SOC
-            {label: "EV SOC", data:dataout[4], yaxis:2, color:"#cc0000", lines: {lineWidth:1, fill: false }},
+            {label: "EV SOC", data:dataout[5], yaxis:2, color:"#cc0000", lines: {lineWidth:1, fill: false }},
+            
             // supply
             {label: "Renewable Supply", data:dataout[0], yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
 
             ], {
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
-                yaxes: [{},{min: 0, max: 100}],
+                yaxes: [{},{min: 0, max: 100},{}],
                 grid: {hoverable: true, clickable: true},
                 selection: { mode: "x" },
                 legend: {position: "nw"}

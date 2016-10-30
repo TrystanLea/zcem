@@ -1,18 +1,18 @@
 <style>
-    h3 { 
-        color:#0699fa;
-        margin:0px;
-    }
-    
-    hr {
-        background: #0699fa;
-        border: 0; height: 1px; 
-        margin-top:8px;
-        margin-bottom:8px;
-    }
+h3 { 
+    color:#0699fa;
+    margin:0px;
+}
+
+hr {
+    background: #0699fa;
+    border: 0; height: 1px; 
+    margin-top:8px;
+    margin-bottom:8px;
+}
 
 table {
-width:auto
+    width:auto
 }
 
 table th {
@@ -26,89 +26,133 @@ table td {
     border: 0px solid #ddd;
     padding:6px 13px;
 }
+
+.box {
+    width:100%;
+    background-color:rgba(68,179,226,0.1);
+    margin-right:20px;
+    margin-bottom:20px;
+}
+
+.inner {
+    padding:20px;
+    color:#333;
+    display:none;
+}
+
+.box-title {
+    background-color:rgba(68,179,226,1.0);
+    padding:10px;
+    color:#fff;
+    cursor:pointer;
+}
+
+.icon-expand {
+    width:12px; 
+    margin-right:10px;
+    margin-top:2px;
+}
+    
 </style>
 
-<h2>Full Household Energy Model</h2>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>FULL HOUSEHOLD ENERGY MODEL</b></div>
+    <div class="inner" style="display:block">
+        View:
+        <button id="pan-left"><</button>
+        <button id="pan-right">></button>
+        <button id="zoom-out">-</button>
+        <button id="zoom-in">+</button>
+        <button id="reset">reset</button>
+        <button id="view-stores">Stores</button>
 
-View:
-<button id="pan-left"><</button>
-<button id="pan-right">></button>
-<button id="zoom-out">-</button>
-<button id="zoom-in">+</button>
-<button id="reset">reset</button>
-<button id="view-stores">Stores</button>
-
-<div id="placeholder_bound" style="width:100%">
-    <div id="placeholder"></div>
+        <div id="placeholder_bound" style="width:100%">
+            <div id="placeholder"></div>
+        </div>
+    </div>
 </div>
-<br>
 
-<hr><h3>SUPPLY</h3><hr>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SUPPLY<span style="float:right" class="modeloutput" key="total_supply_inc_biomass" type="10y"></span></b></div>
+    <div class="inner">
 
-<table class="table" style="width:100%">
-<tr>
-    <td>Onshore wind</td>
-    <td>
-      <input class="modelinput" key="onshorewind_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
-      <span style="font-size:12px" class="modeloutput" key="total_onshore_wind_supply" dp=0 scale=0.1 units="kWh/y"></span>
-    </td>
-    
-    <td>Offshore wind</td>
-    <td><input class="modelinput" key="offshorewind_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
-      <span style="font-size:12px" class="modeloutput" key="total_offshore_wind_supply" dp=0 scale=0.1 units="kWh/y"></span>
-    </td>
-    
-    <td>Solar</td>
-    <td><input class="modelinput" key="solarpv_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
-      <span style="font-size:12px" class="modeloutput" key="total_solar_supply" dp=0 scale=0.1 units="kWh/y"></span>
-    </td>
-</tr>
-<tr>
-    <td>Hydro</td>
-    <td><input class="modelinput" key="hydro_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
-      <span style="font-size:12px" class="modeloutput" key="total_hydro_supply" dp=0 scale=0.1 units="kWh/y"></span>
-    </td>
-    
-    <td>Wave</td>
-    <td><input class="modelinput" key="wave_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
-      <span style="font-size:12px" class="modeloutput" key="total_wave_supply" dp=0 scale=0.1 units="kWh/y"></span>
-    </td>
-    
-    <td>Tidal</td>
-    <td><input class="modelinput" key="tidal_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
-      <span style="font-size:12px" class="modeloutput" key="total_tidal_supply" dp=0 scale=0.1 units="kWh/y"></span>
-    </td>
-</tr>
-<tr>
-    <td>Nuclear</td>
-    <td><input class="modelinput" key="nuclear_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
-      <span style="font-size:12px" class="modeloutput" key="total_nuclear_supply" dp=0 scale=0.1 units="kWh/y"></span>
-    </td>
-    
-    <td></td>
-    <td></td>
-    
-    <td></td>
-    <td></td>
-</tr>
-</table>
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Onshore wind</td>
+            <td>
+              <input class="modelinput" key="onshorewind_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_onshore_wind_supply" type="10y"></span>
+            </td>
+            
+            <td>Offshore wind</td>
+            <td><input class="modelinput" key="offshorewind_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_offshore_wind_supply" type="10y"></span>
+            </td>
+            
+            <td>Solar</td>
+            <td><input class="modelinput" key="solarpv_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_solar_supply" type="10y"></span>
+            </td>
+        </tr>
+        <tr>
+            <td>Hydro</td>
+            <td><input class="modelinput" key="hydro_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_hydro_supply" type="10y"></span>
+            </td>
+            
+            <td>Wave</td>
+            <td><input class="modelinput" key="wave_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_wave_supply" type="10y"></span>
+            </td>
+            
+            <td>Tidal</td>
+            <td><input class="modelinput" key="tidal_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_tidal_supply" type="10y"></span>
+            </td>
+        </tr>
+        <tr>
+            <td>Nuclear</td>
+            <td><input class="modelinput" key="nuclear_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_nuclear_supply" type="10y"></span>
+            </td>
+            
+            <td></td>
+            <td></td>
+            
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Grid losses<br>(default 5%)</td>
+            <td><input class="modelinput" key="grid_loss_prc" type="text" style="width:70px" value="" autocomplete="off"/>
+            </td>
+            
+            <td></td>
+            <td></td>
+            
+            <td></td>
+            <td></td>
+        </tr>
+        </table>
+    </div>
+</div>
 
-<br>
-<hr><h3>LIGHTS, APPLIANCES AND COOKING</h3><hr>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>LIGHTS, APPLIANCES AND COOKING<span style="float:right" class="modeloutput" key="total_trad_elec_demand" type="10y"></span></b></div>
+    <div class="inner">
 
-<table class="table">
-<tr>
-    <td>Traditional electricity demand: (lighting, appliances & cooking)</td>
-    <td><input class="modelinput" key="traditional_electric" type="text" style="width:100px" value="" autocomplete="off"/> kWh</td>
-</tr>
-<tr>
-    <td>Gas cooking and appliance demand:</td>
-    <td><input class="modelinput" key="gas_cooking_demand" type="text" style="width:100px" value="" autocomplete="off"/> kWh</td>
-</tr>
-</table>
+        <table class="table">
+        <tr>
+            <td>Traditional electricity demand: (lighting, appliances & cooking)</td>
+            <td><input class="modelinput" key="traditional_electric" type="text" style="width:100px" value="" autocomplete="off"/> kWh</td>
+        </tr>
+        </table>
+    </div>
+</div>
 
-<br>
-<hr><h3>HOT WATER DEMAND</h3><hr>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>HOT WATER DEMAND<span style="float:right" class="modeloutput" key="DHW_heatpump_demand" type="10y"></span></b></div>
+    <div class="inner">
 
 <table class="table" style="width:50%; float:left">
 <tr>
@@ -130,16 +174,16 @@ View:
 </table>
 <div style="float:left;">
     <table style="font-size:14px">
-    <tr><td>Daily hot water demand</td><td><span class="modeloutput" key="DHW_daily_demand" dp=1 scale=1.0 units="kWh/d"></span></td></tr>
-    <tr><td>Annual hot water demand</td><td><span class="modeloutput" key="total_DHW_heat_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
-    <tr><td>Annual heatpump electricity<br>demand for hot water</td><td><span class="modeloutput" key="total_DHW_heatpump_elec_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
-    <tr><td>Daily heatpump electricity<br>demand for hot water</td><td><span class="modeloutput" key="total_DHW_heatpump_elec_demand_kwhd" dp=1 scale=1 units="kWh/d"></span></td></tr>
+    <tr><td>Hot water demand</td><td><span class="modeloutput" key="total_DHW_heat_demand" type="10y"></span></td></tr>
+    <tr><td>Heatpump demand for hot water</td><td><span class="modeloutput" key="DHW_heatpump_demand" type="10y"></span></td></tr>
     </table>
 </div>
 <div style="clear:both"></div>
 
-<br>
-<hr><h3>SPACE HEATING DEMAND</h3><hr>
+</div></div>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SPACE HEATING DEMAND<span style="float:right" class="modeloutput" key="space_heating_heatpump_demand" type="10y"></span></b></div>
+    <div class="inner">
 
 <table class="table" style="width:50%; float:left">
 <tr>
@@ -219,6 +263,10 @@ View:
     <td><input class="modelinput" key="target_internal_temperature" type="text" style="width:100px" value="" autocomplete="off"/></td>
 </tr>
 <tr>
+    <td>Night time set back (C)</td>
+    <td><input class="modelinput" key="night_time_setback" type="text" style="width:100px" value="" autocomplete="off"/></td>
+</tr>
+<tr>
     <td>Heatpump COP</td>
     <td><input class="modelinput" key="heatpump_COP" type="text" style="width:100px" value="" autocomplete="off"/></td>
 </tr>
@@ -234,58 +282,80 @@ View:
     <tr><td>Infiltration heat loss</td><td><span class="modeloutput" key="infiltration_WK" dp=0 scale=1 units="W/K"></span></td></tr>
     <tr><td>Total fabric efficiency</td><td><span class="modeloutput" key="total_WK" dp=0 scale=1 units="W/K"></span></td></tr>
     <tr><td></td><td></td></tr>
-    <tr><td>Total space heating demand</td><td><span class="modeloutput" key="total_heat_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
-    <tr><td>- Used internal gains</td><td><span class="modeloutput" key="used_internal_gains" dp=0 scale=0.1 units="kWh/y"></span> of <span class="modeloutput" key="total_internal_gains" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
-    <tr><td>- Used solar gains</td><td><span class="modeloutput" key="used_solar_gains" dp=0 scale=0.1 units="kWh/y"></span> of <span class="modeloutput" key="total_solar_gains" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr><td>Total space heating demand</td><td><span class="modeloutput" key="total_space_heating_demand_before_gains" type="10y"></span></td></tr>
+    <tr><td>- Used metabolic gains</td><td><span class="modeloutput" key="used_metabolic_gains" type="10y"></span> of <span class="modeloutput" key="total_metabolic_gains" type="10y"></span></td></tr>
+    <tr><td>- Used internal gains</td><td><span class="modeloutput" key="used_internal_gains" type="10y"></span> of <span class="modeloutput" key="total_internal_gains" type="10y"></span></td></tr>
+    <tr><td>- Used solar gains</td><td><span class="modeloutput" key="used_solar_gains" type="10y"></span> of <span class="modeloutput" key="total_solar_gains" type="10y"></span></td></tr>
     
-    <tr style="border-top:1px solid #aaa"><td>Total heatpump heat demand</td><td><span class="modeloutput" key="total_heatpump_heat_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
-    <tr><td>Total heatpump electric demand</td><td><span class="modeloutput" key="total_heatpump_demand" dp=0 scale=0.1 units="kWh/y"></span></td></tr>
+    <tr style="border-top:1px solid #aaa"><td>Total final heat demand</td><td><span class="modeloutput" key="total_final_space_heating_demand" type="10y"></span></td></tr>
+    <tr><td>Total heatpump electric demand</td><td><span class="modeloutput" key="space_heating_heatpump_demand" type="10y"></span></td></tr>
     <tr><td></td><td></td></tr>
-    <tr><td>Space heating heat demand<br>by floorarea</td><td><span class="modeloutput" key="spaceheatkwhm2" dp=0 scale=1 units="kWh/m2/y"></span></td></tr>
+    <tr><td>Space heating heat demand<br>by floor area</td><td><span class="modeloutput" key="spaceheatkwhm2" dp=0 scale=1 units="kWh/m2/y"></span></td></tr>
     </table>
 </div>
 
 <div style="clear:both"></div>
-<br>
-<hr><h3>TRANSPORT DEMAND</h3><hr>
+</div></div>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>TRANSPORT DEMAND<span style="float:right" class="modeloutput" key="DHW_heatpump_demand" type="10y"></span></b></div>
+    <div class="inner">
 
 <table class="table">
 <tr>
     <td>Electric car miles driven:</td>
-    <td><input class="modelinput" key="EV_annual_miles" type="text" style="width:100px" value="" autocomplete="off"/></td>
-    <td>Electric car performance (miles per kwh):</td>
-    <td><input class="modelinput" key="EV_miles_per_kwh" type="text" style="width:100px" value="" autocomplete="off"/></td>
-    <td>Electric car battery capacity  (kWh):</td>
-    <td><input class="modelinput" key="EV_battery_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
+    <td><input class="modelinput" key="EV_annual_miles" type="text" style="width:60px" value="" autocomplete="off"/></td>
+    <td>Performance (miles/kwh):</td>
+    <td><input class="modelinput" key="EV_miles_per_kwh" type="text" style="width:60px" value="" autocomplete="off"/></td>
+    <td>Battery capacity  (kWh):</td>
+    <td><input class="modelinput" key="EV_battery_capacity" type="text" style="width:60px" value="" autocomplete="off"/></td>
+    <td>Charge type:</td>
+    <td>
+    <select class="modelinput" key="charge_type" autocomplete="off">
+        <option value="constantcharge">Constant charge</option>
+        <option value="nightcharge">Night charge only</option>
+        <option value="morenight">More in the night</option>
+        <option value="moreday">More in the day</option>
+        <option value="smartcharge">Smart charge</option>
+    </select>
+    </td>
 </tr>
 <tr>
     <td>Hydrogen car miles driven:</td>
-    <td><input class="modelinput" key="H2EV_annual_miles" type="text" style="width:100px" value="" autocomplete="off"/></td>
-    <td>Hydrogen car performance (miles per kwh):</td>
-    <td><input class="modelinput" key="H2EV_miles_per_kwh" type="text" style="width:100px" value="" autocomplete="off"/></td>
+    <td><input class="modelinput" key="H2EV_annual_miles" type="text" style="width:60px" value="" autocomplete="off"/></td>
+    <td>Performance (miles/kwh):</td>
+    <td><input class="modelinput" key="H2EV_miles_per_kwh" type="text" style="width:60px" value="" autocomplete="off"/></td>
     <td></td>
     <td></td>
 </tr>
 <tr>
     <td>Internal combustion car miles driven:</td>
-    <td><input class="modelinput" key="IC_annual_miles" type="text" style="width:100px" value="" autocomplete="off"/></td>
-    <td>Internal combustion car performance (MPG):</td>
-    <td><input class="modelinput" key="IC_MPG" type="text" style="width:100px" value="" autocomplete="off"/></td>
+    <td><input class="modelinput" key="IC_annual_miles" type="text" style="width:60px" value="" autocomplete="off"/></td>
+    <td>Performance (MPG):</td>
+    <td><input class="modelinput" key="IC_MPG" type="text" style="width:60px" value="" autocomplete="off"/></td>
     <td></td>
     <td></td>
 </tr>
 <tr>
     <td>Air miles</td>
-    <td><input class="modelinput" key="aviation_miles" type="text" style="width:100px" value="" autocomplete="off"/></td>
+    <td><input class="modelinput" key="aviation_miles" type="text" style="width:60px" value="" autocomplete="off"/></td>
     <td><i style="font-size:14px">Based on energy performance of 1.3 miles/kWh liquid fuel</i></td>
     <td></td>
     <td></td>
 </tr>
-
+<tr>
+    <td>Electric bike:</td>
+    <td><input class="modelinput" key="ebike_annual_miles" type="text" style="width:60px" value="" autocomplete="off"/></td>
+    <td>Performance (miles/kwh):</td>
+    <td><input class="modelinput" key="ebike_miles_per_kwh" type="text" style="width:60px" value="" autocomplete="off"/></td>
+    <td></td>
+    <td></td>
+</tr>
 </table>
 
-<br>
-<hr><h3>LITHIUM ION STORAGE</h3><hr>
+</div></div>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>LITHIUM ION STORAGE<span style="float:right" class="modeloutput" key="total_liion_charge" type="10y"></span></b></div>
+    <div class="inner">
 <table class="table" style="width:50%; float:left">
 <tr>
     <td>Lithium ion store capacity (kWh):</td>
@@ -293,14 +363,16 @@ View:
 </tr>
 </table>
 <div style="float:left;">
-    <p>Total charge: <span class="modeloutput" key="total_liion_charge" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Total discharge: <span class="modeloutput" key="total_liion_discharge" dp=0 scale=0.1 units="kWh/y"></span></p>
+    <p>Total charge: <span class="modeloutput" key="total_liion_charge" type="10y"></span></p>
+    <p>Total discharge: <span class="modeloutput" key="total_liion_discharge" type="10y"></span></p>
     <p>Final SOC: <span class="modeloutput" key="liion_SOC" dp=1 scale=1 units="kWh"></span></p>
 </div>
 <div style="clear:both"></div>
 
-<br>
-<hr><h3>HYDROGEN</h3><hr>
+</div></div>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>HYDROGEN<span style="float:right" class="modeloutput" key="total_electrolysis_demand" type="10y"></span></b></div>
+    <div class="inner">
 <table class="table" style="width:50%; float:left">
 <tr>
     <td>Electrolysis capacity (kW):</td>
@@ -316,16 +388,18 @@ View:
 </tr>
 </table>
 <div style="float:left;">
-    <p>Total electrolysis demand: <span class="modeloutput" key="total_electrolysis_demand" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Total hydrogen produced: <span class="modeloutput" key="total_H2_produced" dp=0 scale=0.1 units="kWh/y"></span></p>
+    <p>Total electrolysis demand: <span class="modeloutput" key="total_electrolysis_demand" type="10y"></span></p>
+    <p>Total hydrogen produced: <span class="modeloutput" key="total_H2_produced" type="10y"></span></p>
     <p>Final hydrogen store level: <span class="modeloutput" key="H2_store_level" dp=1 scale=1 units="kWh"></span></p>
-    <p>Total fuel cell output: <span class="modeloutput" key="total_fuel_cell_output" dp=0 scale=0.1 units="kWh/y"></span></p>
+    <p>Total fuel cell output: <span class="modeloutput" key="total_fuel_cell_output" type="10y"></span></p>
 </div>
 <div style="clear:both"></div>
 <p><i>Efficiencies: Electrolysis:70%, FuelCell:47%, Round trip:33%</i></p>
 
-<br>
-<hr><h3>SYNTHETIC LIQUID FUEL</h3><hr>
+</div></div>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SYNTHETIC LIQUID FUEL<span style="float:right" class="modeloutput" key="prc_landarea_for_synthfuel" dp=0 units="%"></span></b></div>
+    <div class="inner">
 <table class="table" style="width:50%; float:left">
 <tr>
     <td>Liquid store capacity (kWh):</td>
@@ -333,60 +407,71 @@ View:
 </tr>
 </table>
 <div style="float:left;">
-    <p>Total synth fuel production: <span class="modeloutput" key="total_synthfuel_production" dp=0 scale=0.1 units="kWh/y"></span><br>
-    From <span class="modeloutput" key="hydrogen_for_synthfuel" dp=0 scale=0.1 units="kWh/y"></span> of hydrogen + <span class="modeloutput" key="biomass_for_synthfuel" dp=0 scale=0.1 units="kWh/y"></span> of biomass<br>
+    <p>Total synth fuel production: <span class="modeloutput" key="total_synthfuel_production" type="10y"></span><br>
+    From <span class="modeloutput" key="hydrogen_for_synthfuel" type="10y"></span> of hydrogen + <span class="modeloutput" key="biomass_for_synthfuel" type="10y"></span> of biomass<br>
     Land area for biomass required <span class="modeloutput" key="landarea_for_synthfuel" dp=0 scale=1 units="m2"></span> (<span class="modeloutput" key="prc_landarea_for_synthfuel" dp=0></span>% of arable land)</p>
-    <p>Unmet liquid demand: <span class="modeloutput" key="unmet_liquid_demand" dp=0 scale=0.1 units="kWh/y"></span></p>
+    <p>Unmet liquid demand: <span class="modeloutput" key="unmet_liquid_demand" type="10y"></span></p>
     <p>Final liquid store level: <span class="modeloutput" key="liquid_store_level" dp=0 scale=1 units="kWh"></span></p>
 </div>
 <div style="clear:both"></div>
 
-<br>
-<hr><h3>SYNTHETIC METHANE</h3><hr>
-<table class="table" style="width:50%; float:left">
-<tr>
-    <td>Gas store capacity (kWh):</td>
-    <td><input class="modelinput" key="methane_store_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
-</tr>
-</table>
-<div style="float:left;">
-    <p>Total methane production: <span class="modeloutput" key="total_methane_production" dp=0 scale=0.1 units="kWh/y"></span><br>
-    From <span class="modeloutput" key="hydrogen_for_methane" dp=0 scale=0.1 units="kWh/y"></span> of hydrogen + <span class="modeloutput" key="biomass_for_methane" dp=0 scale=0.1 units="kWh/y"></span> of biomass<br>
-    Land area for biomass required <span class="modeloutput" key="landarea_for_methane" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_methane" dp=0></span>% of arable land)</p>
-    <p>Unmet gas demand: <span class="modeloutput" key="unmet_methane_demand" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Final gas store level: <span class="modeloutput" key="methane_store_level" dp=0 scale=1 units="kWh"></span></p>
-</div>
-<div style="clear:both"></div>
-
-<br>
-<hr><h3>BIOMASS</h3><hr>
-<div style="float:left;">
-    <p>Total biomass required: <span class="modeloutput" key="biomass_requirement" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Land area required biomass: <span class="modeloutput" key="biomass_m2" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_biomass" dp=0></span>% of all arable land)</p>
-</div>
-<div style="clear:both"></div>
-
-<br>
-<hr><h3>BACKUP GAS TURBINES</h3><hr>
-<div style="float:left;">
-    <p>Total unmet demand before CCGT backup: <span class="modeloutput" key="total_unmet_before_CCGT" dp=0 scale=0.1 units="kWh/y"></span></p>
-    <p>Total CCGT output: <span class="modeloutput" key="total_CCGT_output" dp=0 scale=0.1 units="kWh/y"></span></p>
-</div>
-<div style="clear:both"></div>
-
-<br>
-<hr><h3>FINAL SUPPLY DEMAND MATCHING<span style="float:right" class="modeloutput" key="prc_demand_supplied" dp=1 scale=1 units="%"></span> </h3><hr>
-<div style="float:left;">
-    <p>Total supply: <span class="modeloutput" key="total_supply_inc_biomass" dp=1 scale=0.1 units="kWh/y"></span> (<span class="modeloutput" key="total_supply_inc_biomass_kwhd" dp=1 scale=1 units="kWh/d"></span>)</p>
-    <p>Total demand: <span class="modeloutput" key="total_demand_inc_aviation" dp=1 scale=0.1 units="kWh/y"></span> (<span class="modeloutput" key="total_demand_inc_aviation_kwhd" dp=1 scale=1 units="kWh/d"></span>)</p>
-    <p>Primary energy factor: <span class="modeloutput" key="primary_energy_factor" dp=2 scale=1 units=""></span></p>
-    <p>Exess generation: <span class="modeloutput" key="exess_generation" dp=0 scale=1 units="kWh/y"></span></p>
-    <p>Unmet demand: <span class="modeloutput" key="unmet_demand" dp=0 scale=1 units="kWh/y"></span></p>
-</div>
-<div style="clear:both"></div>
-
-<div id="stacks_bound" style="width:100%; height:600; position:relative;">
-    <canvas id="stacks" width="600" height="600"></canvas>
+</div></div>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SYNTHETIC METHANE<span style="float:right" class="modeloutput" key="prc_landarea_for_methane" dp=0 units="%"></span></b></div>
+    <div class="inner">
+        <table class="table" style="width:50%; float:left">
+        <tr>
+            <td>Gas store capacity (kWh):</td>
+            <td><input class="modelinput" key="methane_store_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
+        </tr>
+        </table>
+        <div style="float:left;">
+            <p>Total methane production: <span class="modeloutput" key="total_methane_production" type="10y"></span><br>
+            From <span class="modeloutput" key="hydrogen_for_methane" type="10y"></span> of hydrogen + <span class="modeloutput" key="biomass_for_methane" type="10y"></span> of biomass<br>
+            Land area for biomass required <span class="modeloutput" key="landarea_for_methane" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_methane" dp=0></span>% of arable land)</p>
+            <p>Unmet gas demand: <span class="modeloutput" key="unmet_methane_demand" type="10y"></span></p>
+            <p>Final gas store level: <span class="modeloutput" key="methane_store_level" dp=0 scale=1 units="kWh"></span></p>
+        </div>
+        <div style="clear:both"></div>
+    </div>
 </div>
 
-<button id="auto_scale_supply">Auto scale supply</button>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>BIOMASS<div style="float:right"><span class="modeloutput" key="biomass_requirement" type="10y"></span> (<span class="modeloutput" key="prc_landarea_for_biomass" dp=0></span>%)</b></div></div>
+    <div class="inner">
+        <div style="float:left;">
+            <p>Total biomass required: <span class="modeloutput" key="biomass_requirement" type="10y"></span></p>
+            <p>Land area required biomass: <span class="modeloutput" key="biomass_m2" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_biomass" dp=0></span>% of all arable land)</p>
+        </div>
+        <div style="clear:both"></div>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>BACKUP GAS TURBINES<span style="float:right" class="modeloutput" key="total_CCGT_output" type="10y"></span></b></div>
+    <div class="inner">
+        <div style="float:left;">
+            <p>Total unmet demand before CCGT backup: <span class="modeloutput" key="total_unmet_before_CCGT" type="10y"></span></p>
+            <p>Total CCGT output: <span class="modeloutput" key="total_CCGT_output" type="10y"></span></p>
+        </div>
+        <div style="clear:both"></div>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>FINAL SUPPLY DEMAND MATCHING<span style="float:right" class="modeloutput" key="prc_demand_supplied" dp=1 scale=1 units="%"></span> </b></div>
+    <div class="inner" style="display:block">
+        <div style="float:left;">
+            <p>Total supply: <span class="modeloutput" key="total_supply_inc_biomass" type="10y"></span></p>
+            <p>Total demand: <span class="modeloutput" key="total_demand_inc_aviation" type="10y"></span></p>
+            <p>Primary energy factor: <span class="modeloutput" key="primary_energy_factor" dp=2 scale=1 units=""></span></p>
+            <p>Exess generation: <span class="modeloutput" key="exess_generation" type="10y"></span></p>
+            <p>Unmet demand: <span class="modeloutput" key="unmet_demand" type="10y"></span></p>
+        </div>
+        <div style="clear:both"></div>
+
+        <div id="stacks_bound" style="width:100%; height:600; position:relative;">
+            <canvas id="stacks" width="600" height="600"></canvas>
+        </div>
+    </div>
+</div>
