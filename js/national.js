@@ -42,6 +42,14 @@ function national_init()
     traditional_electric = 1642
     hourly_traditional_electric = traditional_electric / 8764.8
     
+    number_of_lights = 10
+    lights_power = 11
+    alwayson = 7
+    fridgefreezer = 262.0
+    washingmachine = 136.0
+    cooking = 401.0
+    computing = 212.0
+    
     //                 0 1 2 3 4 5 6 7 8 9 0 1 2 1 2 3 4 5 6 7 8 9 0 1
     cooking_profile = [0,0,0,0,0,1,3,6,7,5,2,3,5,6,2,1,2,3,5,7,6,4,2,1];
     // Normalise
@@ -155,6 +163,7 @@ function national_run()
     total_demand = 0
     
     total_trad_elec_demand = 0
+    total_lighting_demand = 0
 
     // DHW Demand
     DHW_daily_demand = 0
@@ -333,27 +342,25 @@ function national_run()
         // tradelec = trad_demand_factor * traditional_electric * 10
         tradelec = 0
 
-        // Lighting model        
-        number_of_lights = 10
-        lights_power = 11
-        
+        // Lighting model
         lighting_demand = number_of_lights * lights_power * 0.001
-        lighting_demand -= parseFloat(capacityfactors[4])*0.15
+        lighting_demand -= lighting_demand * parseFloat(capacityfactors[4]) * 1.5
         if (lighting_demand<0) lighting_demand = 0
         if ((hour%24)>23) lighting_demand *= 0.1
         if ((hour%24)<7) lighting_demand *= 0.1
         tradelec += lighting_demand
+        total_lighting_demand += lighting_demand
         
         // Fridge + freezer                 0.72 kWh/d
-        tradelec += 262.0 / 8760
+        tradelec += fridgefreezer / 8760
         // Washing machine                  0.34 kWh/d
-        tradelec += 136.0 / 8760          
+        tradelec += washingmachine / 8760          
         // internet router 7W continuous    0.17 kWh/d
-        tradelec += 7.0 * 0.001
+        tradelec += alwayson * 0.001
         // Cooking                          1.1 kWh/d
-        tradelec += 1.1 * cooking_profile[hour%24]
+        tradelec += (cooking/365) * cooking_profile[hour%24]
         // Laptop                           0.58 kWh/d
-        tradelec += (0.29 * 2) / 24.0
+        tradelec += computing / 8760
         
         balance -= tradelec
         demand += tradelec
@@ -787,6 +794,7 @@ function national_run()
         data[5].push([time, 100*(EV_SOC/EV_battery_capacity)]);
         data[6].push([time, methane_store_level]);
     }
+    lighting_utilisation = 100 * total_lighting_demand / (number_of_lights * lights_power * 0.024 * 365 * 10) 
     
     // Heating ---------------------------------------------------------------------
     average_temperature = average_temperature / hours

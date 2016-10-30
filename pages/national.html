@@ -140,13 +140,37 @@ table td {
 <div class="box">
     <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>LIGHTS, APPLIANCES AND COOKING<span style="float:right" class="modeloutput" key="total_trad_elec_demand" type="10y"></span></b></div>
     <div class="inner">
-
-        <table class="table">
+        <table class="table" style="width:50%; float:left">
         <tr>
-            <td>Traditional electricity demand: (lighting, appliances & cooking)</td>
-            <td><input class="modelinput" key="traditional_electric" type="text" style="width:100px" value="" autocomplete="off"/> kWh</td>
+            <td>Number of lights</td>
+            <td><input class="modelinput" key="number_of_lights" type="text" style="width:60px" value="" autocomplete="off"/></td>
+        </tr><tr>
+            <td>Average light power</td>
+            <td><input class="modelinput" key="lights_power" type="text" style="width:60px" value="" autocomplete="off"/> Watts</td>
+        </tr><tr>
+            <td>Internet router + other always on<br>devices, appliances, stand-by</td>
+            <td><input class="modelinput" key="alwayson" type="text" style="width:60px" value="" autocomplete="off"/> Watts</td>
+        </tr><tr>
+            <td>Fridge/Freezer annual consumption</td>
+            <td><input class="modelinput" key="fridgefreezer" type="text" style="width:60px" value="" autocomplete="off"/> kWh</td>
+        </tr><tr>
+            <td>Washing machine annual consumption</td>
+            <td><input class="modelinput" key="washingmachine" type="text" style="width:60px" value="" autocomplete="off"/> kWh</td>
+        </tr><tr>
+            <td>Cooking annual consumption<br>(1.1 kWh x 365)</td>
+            <td><input class="modelinput" key="cooking" type="text" style="width:60px" value="" autocomplete="off"/> kWh</td>
+        </tr><tr>
+            <td>Laptops and computing<br>(2 x 0.29 kWh x 365)</td>
+            <td><input class="modelinput" key="computing" type="text" style="width:60px" value="" autocomplete="off"/> kWh</td>
         </tr>
         </table>
+        <div style="width:50%; float:left;">
+            <p>Lighting demand: <span class="modeloutput" key="total_lighting_demand" type="10y"></span> 
+            (On time: <span class="modeloutput" key="lighting_utilisation" dp=0 scale=1 units="%"></span>)</p>
+            <p>Lighting demand is based on both day light levels and a time of day based profile</p>
+            <p>Cooking demand implements a time of day based profile, with demand peaks for breakfast, lunch and evening meal</p>
+        </div>
+        <div style="clear:both"></div>
     </div>
 </div>
 
