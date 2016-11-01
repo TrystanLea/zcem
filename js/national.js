@@ -100,7 +100,12 @@ function national_init()
     EV_battery_capacity = 24.0
     EV_SOC = EV_battery_capacity * 0.5
 
-    EV_annual_miles = 6100;
+    EV_annual_miles = 6100
+    H2EV_annual_miles = 0
+    IC_annual_miles = 0
+    
+    H2EV_miles_per_kwh = 1.1
+    IC_MPG = 60
     // Electric vehicle use profile ( miles )
     //                                    1 1 1                   1 1
     //                0 1 2 3 4 5 6 7 8 9 0 1 2 1 2 3 4 5 6 7 8 9 0 1
@@ -118,7 +123,7 @@ function national_init()
     liion_SOC = liion_capacity * 0.5
     // ---------------------------------------------------------------------------
     electrolysis_capacity = 2.0
-    fuel_cell_capacity = 1.0
+    fuel_cell_capacity = 0.0
     
     H2_store_capacity = 10.0
     H2_store_level = 0
@@ -199,7 +204,11 @@ function national_run()
     total_EV_demand = 0
     total_miles_driven = 0
     total_ebike_demand = 0
-
+    
+    total_H2EV_hydrogen_demand = 0
+    total_H2EV_elec_demand = 0
+    total_H2V_draw_from_store = 0 
+    total_IC_liquid_demand = 0
     // Lithium Ion ------------------------------------------
     total_liion_charge = 0
     total_liion_discharge = 0
@@ -222,6 +231,7 @@ function national_run()
     total_unmet_before_CCGT = 0
     total_CCGT_losses = 0
     
+    total_unmet_H2_demand = 0
     // Stores -----------------------------------------------
     H2_store_level = 0
     liquid_store_level = 50
@@ -640,8 +650,39 @@ function national_run()
             // 70% efficiency of hydrogen production
             H2_produced = electricity_for_electrolysis * 0.7
             H2_balance += H2_produced
+            
+            // Start by filling hydrogen store before going on to produce synthetic liquids and gas
+            if ((H2_store_level+H2_produced)>H2_store_capacity) {
+                H2_stored = H2_store_capacity - H2_store_level
+            } else {
+                H2_stored = H2_produced
+            }
+            H2_store_level += H2_stored
+            H2_balance -= H2_stored
         }
 
+        // ---------------------------------------------------------------------------
+        // Hydrogen vehicles
+        // ---------------------------------------------------------------------------
+        H2_miles = EV_use_profile[hour%24] * (H2EV_annual_miles/365.0)
+        H2EV_electrolysis_demand = (H2_miles / H2EV_miles_per_kwh)
+        H2EV_hydrogen_demand = H2EV_electrolysis_demand * 0.7
+        H2_balance -= H2EV_hydrogen_demand
+        total_H2EV_hydrogen_demand += H2EV_hydrogen_demand
+        total_H2EV_elec_demand += H2EV_electrolysis_demand
+        
+        // If hydrogen balance is negative pull H2 out of store
+        if (H2_balance<0) {
+            unmet_H2 = -1 * H2_balance
+            H2V_draw_from_store = unmet_H2
+            
+            if (unmet_H2>H2_store_level)
+                H2V_draw_from_store = H2_store_level
+            
+            H2_store_level -= H2V_draw_from_store
+            total_H2V_draw_from_store += H2V_draw_from_store
+            H2_balance += H2V_draw_from_store
+        }
         // ---------------------------------------------------------------------------
         // Synthetic liquid fuel production Efficiency:53% 
         // ---------------------------------------------------------------------------
@@ -688,32 +729,39 @@ function national_run()
             total_sabatier_losses += (methane / (2/3)) - methane
         }
 
-        // ---------------------------------------------------------------------------
-        // Hydrogen storage
-        // ---------------------------------------------------------------------------
+        
         if (H2_balance>0) {
-            H2_stored = H2_balance;
-            // Limit on hydrogen production if store is full
-            if ((H2_store_level+H2_stored)>H2_store_capacity) {
-                H2_stored = H2_store_capacity - H2_store_level
-            }
-            H2_unused = H2_balance - H2_stored
-            
+            H2_unused = H2_balance
             // Work backwards to get the ammended electricity consumption
             electricity_for_electrolysis -= (H2_unused / 0.7)
-            
-            // Add hydrogen to store
-            H2_store_level += H2_stored
+        } else {
+            total_unmet_H2_demand += -1 * H2_balance
+            H2_balance = 0
         }
     
         // Subtract electric used for electrolysis from balance
         balance -= electricity_for_electrolysis
         total_electrolysis_demand += electricity_for_electrolysis
         total_electrolysis_losses += electricity_for_electrolysis * 0.3
+        
+        // ---------------------------------------------------------------------------
+        // Internal Combustion Annual Miles
+        // ---------------------------------------------------------------------------
+        IC_miles = EV_use_profile[hour%24] * (IC_annual_miles/365.0)
+        IC_liquid_demand = (IC_miles / IC_MPG) * 4.54609 * 9.7
+        total_IC_liquid_demand += IC_liquid_demand
+        
+        if ((liquid_store_level-IC_liquid_demand)<0) {
+            unmet_liquid_demand += -1 * (liquid_store_level-IC_liquid_demand)
+            liquid_store_level = 0
+        } else {
+            liquid_store_level -= IC_liquid_demand
+        }
+        
         // ---------------------------------------------------------------------------
         // Aviation demand distributed eavenly across the year
         // ---------------------------------------------------------------------------
-        var hourly_aviation_demand = (aviation_miles / aviation_miles_per_kwh) / (365.0 * 24.0)
+        hourly_aviation_demand = (aviation_miles / aviation_miles_per_kwh) / (365.0 * 24.0)
         total_aviation_demand += hourly_aviation_demand
         
         if ((liquid_store_level-hourly_aviation_demand)<0) {
@@ -722,6 +770,8 @@ function national_run()
         } else {
             liquid_store_level -= hourly_aviation_demand
         }
+        
+        
         
         // ---------------------------------------------------------------------------
         // Backup: H2 fuel cells
@@ -792,7 +842,9 @@ function national_run()
         data[3].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore]);
         data[4].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore+EV_charge_rate]);
         data[5].push([time, 100*(EV_SOC/EV_battery_capacity)]);
-        data[6].push([time, methane_store_level]);
+        //data[6].push([time, methane_store_level]);
+        data[6].push([time, H2_store_level]);
+        
     }
     lighting_utilisation = 100 * total_lighting_demand / (number_of_lights * lights_power * 0.024 * 365 * 10) 
     
@@ -830,7 +882,7 @@ function national_run()
     total_supply_inc_biomass = total_supply+biomass_requirement;
     total_supply_inc_biomass_kwhd = total_supply_inc_biomass / 3650;
 
-    total_demand_inc_aviation = total_demand+total_aviation_demand
+    total_demand_inc_aviation = total_demand+total_aviation_demand+total_H2EV_hydrogen_demand+total_IC_liquid_demand
     total_demand_inc_aviation_kwhd = total_demand_inc_aviation / 3650;
     
     primary_energy_factor = total_supply_inc_biomass / total_demand_inc_aviation
@@ -839,7 +891,7 @@ function national_run()
     total_exess = exess_generation + methane_store_level + liquid_store_level + H2_store_level
     total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses
     
-    
+    total_transport_demand = total_EV_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand + total_aviation_demand + total_ebike_demand
     
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
@@ -891,11 +943,14 @@ function national_run()
           {"kwhd":total_exess/3650,"name":"Exess","color":3}
         ]
       },
+      
       {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650),"saving":0,
         "stack":[
           {"kwhd":total_trad_elec_demand/3650,"name":"LAC","color":0},
           {"kwhd":total_heatpump_elec_demand/3650,"name":"Heatpumps","color":0},
           {"kwhd":total_EV_demand/3650,"name":"Electric Cars","color":0},
+          {"kwhd":total_H2EV_hydrogen_demand/3650,"name":"Hydrogen Cars","color":0},
+          {"kwhd":total_IC_liquid_demand/3650,"name":"IC Cars","color":0},
           {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
           {"kwhd":total_ebike_demand/3650,"name":"E-Bikes","color":0},
           {"kwhd":total_electrolysis_losses/3650,"name":"H2 losses","color":2},
