@@ -842,8 +842,8 @@ function national_run()
         data[3].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore]);
         data[4].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore+EV_charge_rate]);
         data[5].push([time, 100*(EV_SOC/EV_battery_capacity)]);
-        //data[6].push([time, methane_store_level]);
-        data[6].push([time, H2_store_level]);
+        data[6].push([time, methane_store_level]);
+        //data[6].push([time, H2_store_level]);
         
     }
     lighting_utilisation = 100 * total_lighting_demand / (number_of_lights * lights_power * 0.024 * 365 * 10) 
@@ -904,10 +904,18 @@ function national_run()
     // Wind EROI = 86, assuming 20 years, 713 kWh/kWp
 
     embodied_energy_kwhd = 0
-    embodied_energy_kwhd += ((onshorewind_capacity * 800) / (20 * 365))
-    embodied_energy_kwhd += ((offshorewind_capacity * 1000) / (20 * 365))
-    embodied_energy_kwhd += ((solarpv_capacity * 2200) / (30 * 365))
-    embodied_energy_kwhd += ((EV_battery_capacity * 136.0) / ((150000.0/EV_annual_miles) * 365))
+    
+    EE_onshorewind = ((onshorewind_capacity * 1500) / (20 * 365))
+    embodied_energy_kwhd += EE_onshorewind
+    EE_offshorewind = ((offshorewind_capacity * 1800) / (20 * 365))
+    embodied_energy_kwhd += EE_offshorewind
+    EE_solarpv = ((solarpv_capacity * 2200) / (30 * 365))
+    embodied_energy_kwhd += EE_solarpv
+    
+    EE_liion_store = (((liion_capacity * 136.0) / 6000 * 0.8) * total_liion_charge)/3650
+    embodied_energy_kwhd += EE_liion_store
+    EE_ecarbattery = ((EV_battery_capacity * 136.0) / ((150000.0/EV_annual_miles) * 365))
+    embodied_energy_kwhd += EE_ecarbattery
    
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
@@ -926,6 +934,16 @@ function national_run()
                 dp = 1
             } else if (unitsmode=="kwhy") {
                 scale = 1.0 / 10
+                units = " kWh/y"
+                dp = 0
+            }
+        } else if(type=="1d") {
+            if (unitsmode=="kwhd") {
+                scale = 1.0
+                units = " kWh/d"
+                dp = 2
+            } else if (unitsmode=="kwhy") {
+                scale = 1.0 * 365
                 units = " kWh/y"
                 dp = 0
             }
