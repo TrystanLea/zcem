@@ -2,6 +2,10 @@
 
 ### [Launch online tool: http://openenergymonitor.org/energymodel](http://openenergymonitor.org/energymodel)
 
+https://learn.openenergymonitor.org/sustainable-energy/zcem/integrated.html#introduction
+
+***
+
 ![intro.png](img/model.png)
 
 ![intro.png](img/intro.png)
