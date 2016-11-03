@@ -27,19 +27,20 @@ var pageload = 0;
 load_capacityfactor_dataset(function(){
     console.log("capacityfactor dataset loaded");
     datasets ++;
+    on_dataset_load();
 });
 
 load_temperature_dataset(function(){
     console.log("temperature dataset loaded");
     datasets ++;
+    on_dataset_load();
 });
 
 page = (window.location.hash).substring(1);
 if (page=="") page = "introduction";
-load_page(page);
 
 $(document).ready(function() {
-$("#rightpanel-inner").html(view_desc[page]);
+    $("#rightpanel-inner").html(view_desc[page]);
 });
 
 $(window).on('hashchange', function() {
@@ -131,6 +132,12 @@ $("#model").on("click",".box-title",function(){
    var box = $(this).parent().find(".inner");
    if (box.is(":visible")) box.hide(); else box.show();
 });
+
+function on_dataset_load() {
+    if (datasets==2) {
+        load_page(page);
+    }
+}
 
 </script>
 

@@ -893,6 +893,22 @@ function national_run()
     
     total_transport_demand = total_EV_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand + total_aviation_demand + total_ebike_demand
     
+    // ----------------------------------------------------------------------------
+    // Embodied Energy
+    // ----------------------------------------------------------------------------
+    // http://pubs.rsc.org/en/content/articlehtml/2015/ee/c4ee04041d#eqn24
+    // Solar EROI = 8, assuming 25 years, 2740 kWh/kWp
+    // http://info.cat.org.uk/questions/pv/what-energy-and-carbon-payback-time-pv-panels-uk/
+    // Emodied energy of 1kWp about 2200 kWh/kWp
+    
+    // Wind EROI = 86, assuming 20 years, 713 kWh/kWp
+
+    embodied_energy_kwhd = 0
+    embodied_energy_kwhd += ((onshorewind_capacity * 800) / (20 * 365))
+    embodied_energy_kwhd += ((offshorewind_capacity * 1000) / (20 * 365))
+    embodied_energy_kwhd += ((solarpv_capacity * 2200) / (30 * 365))
+    embodied_energy_kwhd += ((EV_battery_capacity * 136.0) / ((150000.0/EV_annual_miles) * 365))
+   
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
         var key = $(this).attr("key");
