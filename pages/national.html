@@ -174,7 +174,7 @@ table td {
 </div>
 
 <div class="box">
-    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>HOT WATER DEMAND<span style="float:right" class="modeloutput" key="DHW_heatpump_demand" type="10y"></span></b></div>
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>HOT WATER DEMAND<span style="float:right" class="modeloutput" key="total_DHW_heat_demand" type="10y"></span></b></div>
     <div class="inner">
 
 <table class="table" style="width:50%; float:left">
@@ -198,14 +198,13 @@ table td {
 <div style="float:left;">
     <table style="font-size:14px">
     <tr><td>Hot water demand</td><td><span class="modeloutput" key="total_DHW_heat_demand" type="10y"></span></td></tr>
-    <tr><td>Heatpump demand for hot water</td><td><span class="modeloutput" key="DHW_heatpump_demand" type="10y"></span></td></tr>
     </table>
 </div>
 <div style="clear:both"></div>
 
 </div></div>
 <div class="box">
-    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SPACE HEATING DEMAND<span style="float:right" class="modeloutput" key="space_heating_heatpump_demand" type="10y"></span></b></div>
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SPACE HEATING DEMAND<span style="float:right" class="modeloutput" key="total_final_space_heating_demand" type="10y"></span></b></div>
     <div class="inner">
 
 <table class="table" style="width:50%; float:left">
@@ -311,14 +310,50 @@ table td {
     <tr><td>- Used solar gains</td><td><span class="modeloutput" key="used_solar_gains" type="10y"></span> of <span class="modeloutput" key="total_solar_gains" type="10y"></span></td></tr>
     
     <tr style="border-top:1px solid #aaa"><td>Total final heat demand</td><td><span class="modeloutput" key="total_final_space_heating_demand" type="10y"></span></td></tr>
-    <tr><td>Total heatpump electric demand</td><td><span class="modeloutput" key="space_heating_heatpump_demand" type="10y"></span></td></tr>
     <tr><td></td><td></td></tr>
     <tr><td>Space heating heat demand<br>by floor area</td><td><span class="modeloutput" key="spaceheatkwhm2" dp=0 scale=1 units="kWh/m2/y"></span></td></tr>
     </table>
 </div>
-
 <div style="clear:both"></div>
 </div></div>
+
+<div class="box">
+    <div class="box-title">
+        <img class="icon-expand" src="img/expand.png"><b>HEATING SYSTEM</b>
+    </div>
+    <div class="inner">
+        <p>Total heat demand: <span class="modeloutput" key="total_heating_demand" type="10y"></span></p>
+        <table>
+        <tr><th>Type</th><th>Fraction</th><td></td><th>Efficiency</th><th>Delivered Heat</th><th>Input Electric/fuel</th></tr>
+        <tr>
+            <td>Heatpumps</td>
+            <td><input class="modelinput" key="prc_heat_from_heatpumps" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td>COP</td>
+            <td><input class="modelinput" key="heatpump_COP" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_heatpump_heat_demand" type="10y"></span></td>
+            <td><span class="modeloutput" key="total_heatpump_elec_demand" type="10y"></span></td>
+        </tr>
+        <tr>
+            <td>Gas Boilers</td>
+            <td><input class="modelinput" key="prc_heat_from_gas" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td></td>
+            <td><input class="modelinput" key="gasboiler_efficiency" type="text" style="width:100px" value="" autocomplete="off"/>%</td>
+            <td><span class="modeloutput" key="total_gasboiler_heat_demand" type="10y"></span></td>
+            <td><span class="modeloutput" key="total_gasboiler_gas_demand" type="10y"></span></td>
+        </tr>
+        <tr>
+            <td>Biomass Boilers</td>
+            <td><input class="modelinput" key="prc_heat_from_solid" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td></td>
+            <td><input class="modelinput" key="biomassboiler_efficiency" type="text" style="width:100px" value="" autocomplete="off"/>%</td>
+        </tr>
+        </table>
+        <p>Note: Ensure that the sum of heating system fractions add up to 1.0 to ensure that heat is not under or oversupplied.</p>
+        <div style="clear:both"></div>
+    </div>
+</div>
+
+
 <div class="box">
     <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>TRANSPORT DEMAND<span style="float:right" class="modeloutput" key="total_transport_demand" type="10y"></span></b></div>
     <div class="inner">
@@ -431,7 +466,7 @@ table td {
 
 </div></div>
 <div class="box">
-    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SYNTHETIC LIQUID FUEL<span style="float:right" class="modeloutput" key="prc_landarea_for_synthfuel" dp=0 units="%"></span></b></div>
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SYNTHETIC LIQUID FUEL<span style="float:right" class="modeloutput" key="prc_landarea_for_synthfuel" dp=1 units="%"></span></b></div>
     <div class="inner">
 <table class="table" style="width:50%; float:left">
 <tr>
@@ -446,7 +481,7 @@ table td {
 <div style="float:left;">
     <p>Total synth fuel production: <span class="modeloutput" key="total_synthfuel_production" type="10y"></span><br>
     From <span class="modeloutput" key="hydrogen_for_synthfuel" type="10y"></span> of hydrogen + <span class="modeloutput" key="biomass_for_synthfuel" type="10y"></span> of biomass<br>
-    Land area for biomass required <span class="modeloutput" key="landarea_for_synthfuel" dp=0 scale=1 units="m2"></span> (<span class="modeloutput" key="prc_landarea_for_synthfuel" dp=0></span>% of arable land)</p>
+    Land area for biomass required <span class="modeloutput" key="landarea_for_synthfuel" dp=0 scale=1 units="m2"></span> (<span class="modeloutput" key="prc_landarea_for_synthfuel" dp=1></span>% of UK land area)</p>
     <p>Unmet liquid demand: <span class="modeloutput" key="unmet_liquid_demand" type="10y"></span></p>
     <p>Final liquid store level: <span class="modeloutput" key="liquid_store_level" dp=0 scale=1 units="kWh"></span></p>
 </div>
@@ -454,7 +489,7 @@ table td {
 
 </div></div>
 <div class="box">
-    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SYNTHETIC METHANE<span style="float:right" class="modeloutput" key="prc_landarea_for_methane" dp=0 units="%"></span></b></div>
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SYNTHETIC METHANE<span style="float:right" class="modeloutput" key="prc_landarea_for_methane" dp=1 units="%"></span></b></div>
     <div class="inner">
         <table class="table" style="width:50%; float:left">
         <tr>
@@ -469,7 +504,7 @@ table td {
         <div style="float:left;">
             <p>Total methane production: <span class="modeloutput" key="total_methane_production" type="10y"></span><br>
             From <span class="modeloutput" key="hydrogen_for_methane" type="10y"></span> of hydrogen + <span class="modeloutput" key="biomass_for_methane" type="10y"></span> of biomass<br>
-            Land area for biomass required <span class="modeloutput" key="landarea_for_methane" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_methane" dp=0></span>% of arable land)</p>
+            Land area for biomass required <span class="modeloutput" key="landarea_for_methane" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_methane" dp=1></span>% of UK land area)</p>
             <p>Unmet gas demand: <span class="modeloutput" key="unmet_methane_demand" type="10y"></span></p>
             <p>Final gas store level: <span class="modeloutput" key="methane_store_level" dp=0 scale=1 units="kWh"></span></p>
         </div>
@@ -478,11 +513,14 @@ table td {
 </div>
 
 <div class="box">
-    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>BIOMASS<div style="float:right"><span class="modeloutput" key="biomass_requirement" type="10y"></span> (<span class="modeloutput" key="prc_landarea_for_biomass" dp=0></span>%)</b></div></div>
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>BIOMASS<div style="float:right"><span class="modeloutput" key="biomass_requirement" type="10y"></span> (<span class="modeloutput" key="prc_landarea_for_biomass" dp=1></span>%)</b></div></div>
     <div class="inner">
         <div style="float:left;">
             <p>Total biomass required: <span class="modeloutput" key="biomass_requirement" type="10y"></span></p>
-            <p>Land area required biomass: <span class="modeloutput" key="biomass_m2" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_biomass" dp=0></span>% of all arable land)</p>
+            <p>Biomass for liquid fuel: <span class="modeloutput" key="landarea_for_synthfuel" dp=0 scale=1 units="m2"></span> (<span class="modeloutput" key="prc_landarea_for_synthfuel" dp=1></span>% of UK land area)</p>
+            <p>Biomass for methane: <span class="modeloutput" key="landarea_for_methane" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_methane" dp=1></span>% of UK land area)</p>
+            <p>Total biomass: <span class="modeloutput" key="biomass_m2" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_biomass" dp=1></span>% of UK land area)</p>
+            <p>The total land area of the UK is 24.361 million hectares. Divided by the total number of households in the UK this works out to being 9370 m2 per household. The ZeroCarbonBritain scenario allocates 3186 m2 (34%) for food production, 3092 m2 (33%) for carbon capture, 937 m2 (10%) for conservation, 562 m2 (6%) urban, leaving 1593 m2 (17%) for fuel and energy.</p>
         </div>
         <div style="clear:both"></div>
     </div>
@@ -500,7 +538,11 @@ table td {
 </div>
 
 <div class="box">
-    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>FINAL SUPPLY DEMAND MATCHING<span style="float:right" class="modeloutput" key="prc_demand_supplied" dp=1 scale=1 units="%"></span> </b></div>
+    <div class="box-title">
+        <img class="icon-expand" src="img/expand.png"><b>FINAL SUPPLY DEMAND MATCHING
+        <span style="float:right" class="modeloutput" key="prc_demand_supplied" dp=1 scale=1 units="%"></span>
+        </b>
+    </div>
     <div class="inner" style="display:block">
 
         <div id="stacks_bound" style="width:450; height:530; float:left;">
@@ -528,6 +570,7 @@ table td {
         <tr><td>Solar PV</td><td><span class="modeloutput" key="EE_solarpv" type="1d"></span></td></tr>
         <tr><td>Lithium Ion Store</td><td><span class="modeloutput" key="EE_liion_store" type="1d"></span></td></tr>
         <tr><td>Electric Vehicle Battery</td><td><span class="modeloutput" key="EE_ecarbattery" type="1d"></span></td></tr>
+        <tr><td>Electric Vehicle (rest)</td><td><span class="modeloutput" key="EE_ecar" type="1d"></span></td></tr>
         <tr><td>Emodied Energy Estimate</td><td><span class="modeloutput" key="embodied_energy_kwhd" dp=1 scale=1 units="kWh/d"></span></td></tr>
         </table>
         <div style="float:left; width:45%">

@@ -92,6 +92,15 @@ function national_init()
 
     heatstore_capacity = 10
     heatstore = heatstore_capacity * 0.5
+    
+    gasboiler_efficiency = 0.92
+    biomassboiler_efficiency = 0.92
+    
+    prc_heat_from_direct_electric = 0.0
+    prc_heat_from_heatpumps = 1.0
+    prc_heat_from_gas = 0.0
+    prc_heat_from_solid = 0.0
+    prc_heat_from_liquid = 0.0
 
     // ---------------------------------------------------------------------------
     // EV performance and battery capacity
@@ -197,8 +206,14 @@ function national_run()
     
     total_space_heating_demand = 0
     
+    
+    total_heating_demand = 0
+    
     total_heatpump_heat_demand = 0
     total_heatpump_elec_demand = 0
+    
+    total_gasboiler_heat_demand = 0
+    total_gasboiler_gas_demand = 0
     
     // Electric Vehicles ------------------------------------
     total_EV_demand = 0
@@ -227,6 +242,7 @@ function national_run()
     total_synthfuel_production = 0
     total_methane_production = 0
     unmet_methane_demand = 0
+    total_methane_demand = 0
     total_CCGT_output = 0
     total_unmet_before_CCGT = 0
     total_CCGT_losses = 0
@@ -379,19 +395,11 @@ function national_run()
         // ---------------------------------------------------------------------------
         // Hot water demand
         // ---------------------------------------------------------------------------
-        heatpump_heat_demand = 0
+        heat_demand = 0
 
         DHW_demand = DHW_profile[hour%24] * DHW_daily_demand
         total_DHW_heat_demand += DHW_demand
-        
-        // Pull heat from heatstore if available
-        if ((heatstore-DHW_demand)>=0) {
-            heatstore -= DHW_demand
-        } else {
-            DHW_demand -= heatstore
-            heatpump_heat_demand += DHW_demand
-            heatstore = 0
-        }
+        heat_demand += DHW_demand
 
         // ---------------------------------------------------------------------------
         // Space Heating
@@ -442,25 +450,39 @@ function national_run()
             total_solar_gains_unused += (solar_gains - space_heating_demand)
             space_heating_demand = 0
         }
-            
         total_final_space_heating_demand += space_heating_demand
+        
+        // ---------------------------------------------------------------------------
+        // HEATING SYSTEMS
+        // ---------------------------------------------------------------------------
+        heat_demand = (space_heating_demand +  DHW_demand)
+        total_heating_demand += heat_demand
 
         // Pull heat from heatstore if available
-        if ((heatstore-space_heating_demand)>=0) {
-            heatstore -= space_heating_demand
-            space_heating_demand = 0
+        if ((heatstore-heat_demand)>=0) {
+            heatstore -= heat_demand
+            heat_demand_after_heatstore = 0
         } else {
-            space_heating_demand -= heatstore
-            heatpump_heat_demand += space_heating_demand
+            heat_demand_after_heatstore = heat_demand - heatstore
             heatstore = 0
         }
         
+        // Heat from heatpumps
+        heatpump_heat_demand = prc_heat_from_heatpumps * heat_demand_after_heatstore
         heatpump_elec_demand = heatpump_heat_demand / heatpump_COP
-
         balance -= heatpump_elec_demand
         demand += heatpump_elec_demand
         total_heatpump_elec_demand += heatpump_elec_demand
         total_heatpump_heat_demand += heatpump_heat_demand
+        
+        // Heat from gas
+        gas_heat_demand = prc_heat_from_gas * heat_demand_after_heatstore
+        methane_for_heat = gas_heat_demand / gasboiler_efficiency
+        total_gasboiler_heat_demand += gas_heat_demand
+        total_gasboiler_gas_demand += methane_for_heat
+                
+        // Heat from solid
+        solid_heat_demand = prc_heat_from_solid * heat_demand_after_heatstore
 
         // ---------------------------------------------------------------------------
         // TRANSPORT
@@ -584,7 +606,7 @@ function national_run()
         // ---------------------------------------------------------------------------
         heatstore_charge = 0
         heatpump_electricity_demand_heatstore = 0
-        
+        /*
         if (balance>=0) {
             heatpump_electricity_demand_heatstore = balance;
             heatstore_charge = heatpump_electricity_demand_heatstore * heatpump_COP;
@@ -600,7 +622,7 @@ function national_run()
             demand += heatpump_electricity_demand_heatstore
             total_heatpump_elec_demand += heatpump_electricity_demand_heatstore
             total_heatpump_heat_demand += heatstore_charge
-        }
+        }*/
         
         // ---------------------------------------------------------------------------
         // Lithium ion store
@@ -796,30 +818,34 @@ function national_run()
         // ---------------------------------------------------------------------------
         // Backup: Gas power stations
         // ---------------------------------------------------------------------------
+        CCGT_methane = 0
+        
         if (balance<0) {
             total_unmet_before_CCGT += -balance
             CCGT_output = -balance
             CCGT_output = CCGT_output / (1.0-grid_loss_prc)
-            
             if (CCGT_output>CCGT_capacity) CCGT_output = CCGT_capacity
-            
             CCGT_methane = CCGT_output / 0.5
             
-            if ((methane_store_level-CCGT_methane)<0) {
-               unmet_methane_demand += (CCGT_methane - methane_store_level)
-               CCGT_methane = methane_store_level
-            }
-            
-            CCGT_output = CCGT_methane * 0.5
-            CCGT_output = CCGT_output * (1.0-grid_loss_prc)
-            total_grid_losses += CCGT_output * grid_loss_prc
-            
-            methane_store_level -= CCGT_methane
             balance += CCGT_output
+            
+            total_grid_losses += CCGT_output * grid_loss_prc
             total_CCGT_output += CCGT_output
             total_CCGT_losses += CCGT_output
         }
+
+        // ---------------------------------------------------------------------------
+        // Methane store demand
+        // ---------------------------------------------------------------------------  
+        methane_demand = CCGT_methane + methane_for_heat
+        total_methane_demand += methane_demand
         
+        if ((methane_store_level-methane_demand)>=0) {
+            methane_store_level -= methane_demand
+        } else {
+            unmet_methane_demand += (methane_demand - methane_store_level)
+            methane_store_level = 0
+        }
         
         // ---------------------------------------------------------------------------
         // Final balance
@@ -860,20 +886,22 @@ function national_run()
     spaceheatkwhm2 = (total_final_space_heating_demand*0.1) / total_floor_area
     
     // Biomass and synthetic fuels -------------------------------------------------
+    landarea_per_household = 9370
+    
     biomass_landarea_factor = ((1.0/3650)/0.024) / 0.7;
     total_H2_produced = total_electrolysis_demand * 0.7
     biomass_for_synthfuel = total_synthfuel_production / 0.8
     hydrogen_for_synthfuel = biomass_for_synthfuel * 0.5
     landarea_for_synthfuel = biomass_for_synthfuel * biomass_landarea_factor
-    prc_landarea_for_synthfuel = 100 * landarea_for_synthfuel / 1160
+    prc_landarea_for_synthfuel = 100 * landarea_for_synthfuel / 9231
    
     biomass_for_methane = total_methane_production
     hydrogen_for_methane = biomass_for_methane * 0.5
     landarea_for_methane = biomass_for_methane * biomass_landarea_factor
-    prc_landarea_for_methane = 100 * landarea_for_methane / 1160
+    prc_landarea_for_methane = 100 * landarea_for_methane / landarea_per_household
     
     biomass_m2 = biomass_requirement * biomass_landarea_factor
-    prc_landarea_for_biomass = 100 * biomass_m2 / 1160
+    prc_landarea_for_biomass = 100 * biomass_m2 / landarea_per_household
     
     // Overall supply / demand matching -------------------------------------------
     prc_demand_supplied = ((total_demand - unmet_demand) / total_demand) * 100
@@ -882,7 +910,7 @@ function national_run()
     total_supply_inc_biomass = total_supply+biomass_requirement;
     total_supply_inc_biomass_kwhd = total_supply_inc_biomass / 3650;
 
-    total_demand_inc_aviation = total_demand+total_aviation_demand+total_H2EV_hydrogen_demand+total_IC_liquid_demand
+    total_demand_inc_aviation = total_demand+total_aviation_demand+total_H2EV_hydrogen_demand+total_IC_liquid_demand+total_gasboiler_gas_demand
     total_demand_inc_aviation_kwhd = total_demand_inc_aviation / 3650;
     
     primary_energy_factor = total_supply_inc_biomass / total_demand_inc_aviation
@@ -914,9 +942,15 @@ function national_run()
     
     EE_liion_store = (((liion_capacity * 136.0) / 6000 * 0.8) * total_liion_charge)/3650
     embodied_energy_kwhd += EE_liion_store
-    EE_ecarbattery = ((EV_battery_capacity * 136.0) / ((150000.0/EV_annual_miles) * 365))
+    EE_ecarbattery = ((EV_battery_capacity * 136.0) / ((135000.0/EV_annual_miles) * 365))
     embodied_energy_kwhd += EE_ecarbattery
-   
+    
+    EE_ecar = 0
+    if (EV_annual_miles>0)
+        EE_ecar = (24000 / (135000.0/EV_annual_miles)) / 365
+        
+    embodied_energy_kwhd += EE_ecar
+       
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
         var key = $(this).attr("key");
@@ -982,6 +1016,7 @@ function national_run()
         "stack":[
           {"kwhd":total_trad_elec_demand/3650,"name":"LAC","color":0},
           {"kwhd":total_heatpump_elec_demand/3650,"name":"Heatpumps","color":0},
+          {"kwhd":total_gasboiler_gas_demand/3650,"name":"Gas Boiler","color":0},
           {"kwhd":total_EV_demand/3650,"name":"Electric Cars","color":0},
           {"kwhd":total_H2EV_hydrogen_demand/3650,"name":"Hydrogen Cars","color":0},
           {"kwhd":total_IC_liquid_demand/3650,"name":"IC Cars","color":0},
