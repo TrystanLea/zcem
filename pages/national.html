@@ -288,15 +288,7 @@ table td {
     <td>Night time set back (C)</td>
     <td><input class="modelinput" key="night_time_setback" type="text" style="width:100px" value="" autocomplete="off"/></td>
 </tr>
-<tr>
-    <td>Heatpump COP</td>
-    <td><input class="modelinput" key="heatpump_COP" type="text" style="width:100px" value="" autocomplete="off"/></td>
-</tr>
 
-<tr>
-    <td>Heatstore capacity (kWh)</td>
-    <td><input class="modelinput" key="heatstore_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
-</tr>
 </table>
 <div style="float:left;">
     <table style="font-size:14px">
@@ -324,28 +316,30 @@ table td {
     <div class="inner">
         <p>Total heat demand: <span class="modeloutput" key="total_heating_demand" type="10y"></span></p>
         <table>
-        <tr><th>Type</th><th>Fraction</th><td></td><th>Efficiency</th><th>Delivered Heat</th><th>Input Electric/fuel</th></tr>
+        <tr><th>Type</th><th>Fraction</th><td></td><th>Efficiency</th><th>Delivered Heat</th><th>Input Electric/fuel</th><th>Heatstore</th></tr>
         <tr>
             <td>Heatpumps</td>
-            <td><input class="modelinput" key="prc_heat_from_heatpumps" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td><input class="modelinput" key="prc_heat_from_heatpumps" type="text" style="width:40px" value="" autocomplete="off"/></td>
             <td>COP</td>
-            <td><input class="modelinput" key="heatpump_COP" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td><input class="modelinput" key="heatpump_COP" type="text" style="width:40px" value="" autocomplete="off"/></td>
             <td><span class="modeloutput" key="total_heatpump_heat_demand" type="10y"></span></td>
             <td><span class="modeloutput" key="total_heatpump_elec_demand" type="10y"></span></td>
+            <td><input class="modelinput" key="heatstore_capacity" type="text" style="width:30px" value="" autocomplete="off"/> <span style="font-size:14px">kWh</span></td>
+            <td><span class="modeloutput" key="heatstore_cycles" dp=0 scale=1 units="cycles"></span></td>
         </tr>
         <tr>
             <td>Gas Boilers</td>
-            <td><input class="modelinput" key="prc_heat_from_gas" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td><input class="modelinput" key="prc_heat_from_gas" type="text" style="width:40px" value="" autocomplete="off"/></td>
             <td></td>
-            <td><input class="modelinput" key="gasboiler_efficiency" type="text" style="width:100px" value="" autocomplete="off"/>%</td>
+            <td><input class="modelinput" key="gasboiler_efficiency" type="text" style="width:40px" value="" autocomplete="off"/>%</td>
             <td><span class="modeloutput" key="total_gasboiler_heat_demand" type="10y"></span></td>
             <td><span class="modeloutput" key="total_gasboiler_gas_demand" type="10y"></span></td>
         </tr>
         <tr>
             <td>Biomass Boilers</td>
-            <td><input class="modelinput" key="prc_heat_from_solid" type="text" style="width:100px" value="" autocomplete="off"/></td>
+            <td><input class="modelinput" key="prc_heat_from_solid" type="text" style="width:40px" value="" autocomplete="off"/></td>
             <td></td>
-            <td><input class="modelinput" key="biomassboiler_efficiency" type="text" style="width:100px" value="" autocomplete="off"/>%</td>
+            <td><input class="modelinput" key="biomassboiler_efficiency" type="text" style="width:40px" value="" autocomplete="off"/>%</td>
         </tr>
         </table>
         <p>Note: Ensure that the sum of heating system fractions add up to 1.0 to ensure that heat is not under or oversupplied.</p>

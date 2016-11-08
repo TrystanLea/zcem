@@ -211,6 +211,7 @@ function national_run()
     
     total_heatpump_heat_demand = 0
     total_heatpump_elec_demand = 0
+    total_heatstore_charge = 0
     
     total_gasboiler_heat_demand = 0
     total_gasboiler_gas_demand = 0
@@ -457,32 +458,33 @@ function national_run()
         // ---------------------------------------------------------------------------
         heat_demand = (space_heating_demand +  DHW_demand)
         total_heating_demand += heat_demand
-
+        
+        // Heat from heatpumps
+        heatpump_heat_demand = prc_heat_from_heatpumps * heat_demand
+        
         // Pull heat from heatstore if available
-        if ((heatstore-heat_demand)>=0) {
-            heatstore -= heat_demand
-            heat_demand_after_heatstore = 0
+        if ((heatstore-heatpump_heat_demand)>=0) {
+            heatstore -= heatpump_heat_demand
+            heatpump_heat_demand_after_heatstore = 0
         } else {
-            heat_demand_after_heatstore = heat_demand - heatstore
+            heatpump_heat_demand_after_heatstore = heatpump_heat_demand - heatstore
             heatstore = 0
         }
         
-        // Heat from heatpumps
-        heatpump_heat_demand = prc_heat_from_heatpumps * heat_demand_after_heatstore
-        heatpump_elec_demand = heatpump_heat_demand / heatpump_COP
+        heatpump_elec_demand = heatpump_heat_demand_after_heatstore / heatpump_COP
         balance -= heatpump_elec_demand
         demand += heatpump_elec_demand
         total_heatpump_elec_demand += heatpump_elec_demand
-        total_heatpump_heat_demand += heatpump_heat_demand
-        
+        total_heatpump_heat_demand += heatpump_heat_demand_after_heatstore
+                
         // Heat from gas
-        gas_heat_demand = prc_heat_from_gas * heat_demand_after_heatstore
+        gas_heat_demand = prc_heat_from_gas * heat_demand
         methane_for_heat = gas_heat_demand / gasboiler_efficiency
         total_gasboiler_heat_demand += gas_heat_demand
         total_gasboiler_gas_demand += methane_for_heat
                 
         // Heat from solid
-        solid_heat_demand = prc_heat_from_solid * heat_demand_after_heatstore
+        solid_heat_demand = prc_heat_from_solid * heat_demand
 
         // ---------------------------------------------------------------------------
         // TRANSPORT
@@ -605,24 +607,25 @@ function national_run()
         // Heatstore remaining supply
         // ---------------------------------------------------------------------------
         heatstore_charge = 0
-        heatpump_electricity_demand_heatstore = 0
-        /*
+        heatpump_elec_demand_heatstore = 0
+        
         if (balance>=0) {
-            heatpump_electricity_demand_heatstore = balance;
-            heatstore_charge = heatpump_electricity_demand_heatstore * heatpump_COP;
+            heatpump_elec_demand_heatstore = balance;
+            heatstore_charge = heatpump_elec_demand_heatstore * heatpump_COP
             
             if ((heatstore+heatstore_charge)>heatstore_capacity) {
                 heatstore_charge = heatstore_capacity - heatstore 
             }
-            heatpump_electricity_demand_heatstore = heatstore_charge / heatpump_COP;
+            heatpump_elec_demand_heatstore = heatstore_charge / heatpump_COP
             
             heatstore += heatstore_charge;
             
-            balance -= heatpump_electricity_demand_heatstore;
-            demand += heatpump_electricity_demand_heatstore
-            total_heatpump_elec_demand += heatpump_electricity_demand_heatstore
+            balance -= heatpump_elec_demand_heatstore;
+            demand += heatpump_elec_demand_heatstore
+            total_heatpump_elec_demand += heatpump_elec_demand_heatstore
             total_heatpump_heat_demand += heatstore_charge
-        }*/
+            total_heatstore_charge += heatstore_charge
+        }
         
         // ---------------------------------------------------------------------------
         // Lithium ion store
@@ -793,12 +796,9 @@ function national_run()
             liquid_store_level -= hourly_aviation_demand
         }
         
-        
-        
         // ---------------------------------------------------------------------------
         // Backup: H2 fuel cells
         // ---------------------------------------------------------------------------
-        
         if (balance<0) {
             fuel_cell_output = -balance
             // Fuel cell capacity limit
@@ -865,8 +865,8 @@ function national_run()
         data[0].push([time,supply]);
         data[1].push([time,tradelec]);
         data[2].push([time,tradelec]);
-        data[3].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore]);
-        data[4].push([time,tradelec+heatpump_elec_demand+heatpump_electricity_demand_heatstore+EV_charge_rate]);
+        data[3].push([time,tradelec+heatpump_elec_demand+heatpump_elec_demand_heatstore]);
+        data[4].push([time,tradelec+heatpump_elec_demand+heatpump_elec_demand_heatstore+EV_charge_rate]);
         data[5].push([time, 100*(EV_SOC/EV_battery_capacity)]);
         data[6].push([time, methane_store_level]);
         //data[6].push([time, H2_store_level]);
@@ -884,6 +884,10 @@ function national_run()
     DHW_heatpump_demand = total_DHW_heat_demand / heatpump_COP
     space_heating_heatpump_demand = total_final_space_heating_demand / heatpump_COP
     spaceheatkwhm2 = (total_final_space_heating_demand*0.1) / total_floor_area
+    
+    heatstore_cycles = 0
+    if (heatstore_capacity>0)
+        heatstore_cycles = total_heatstore_charge / heatstore_capacity
     
     // Biomass and synthetic fuels -------------------------------------------------
     landarea_per_household = 9370
@@ -914,7 +918,6 @@ function national_run()
     total_demand_inc_aviation_kwhd = total_demand_inc_aviation / 3650;
     
     primary_energy_factor = total_supply_inc_biomass / total_demand_inc_aviation
-    
     
     total_exess = exess_generation + methane_store_level + liquid_store_level + H2_store_level
     total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses
@@ -986,6 +989,12 @@ function national_run()
         $(this).html("<span>"+(1*window[key]*scale).toFixed(dp)+"</span><span style='font-size:90%'>"+units+"</span>");
     });
     
+    total_unmet_demand = (unmet_demand+unmet_methane_demand+unmet_liquid_demand+unmet_demand_atuse)/3650
+    
+    console.log("TOTAL SUPPLY: "+(total_supply_inc_biomass_kwhd+total_unmet_demand))
+    console.log("TOTAL DEMAND: "+(total_demand_inc_aviation_kwhd + (total_losses/3650) + (total_exess/3650)))
+    console.log("ERROR: "+((total_supply_inc_biomass_kwhd+total_unmet_demand)-(total_demand_inc_aviation_kwhd + (total_losses/3650) + (total_exess/3650))))
+    
     var stacks = [
       {"name":"Supply","height":total_supply_inc_biomass_kwhd,"saving":0,
         "stack":[
@@ -1001,10 +1010,12 @@ function national_run()
           {"kwhd":total_tidal_supply/3650,"name":"Tidal","color":1},
           {"kwhd":total_hydro_supply/3650,"name":"Hydro","color":1},
           {"kwhd":total_nuclear_supply/3650,"name":"Nuclear","color":1},
-          {"kwhd":biomass_requirement/3650,"name":"Biomass","color":1}
+          {"kwhd":biomass_requirement/3650,"name":"Biomass","color":1},
+          {"kwhd":(unmet_demand+unmet_methane_demand+unmet_liquid_demand+unmet_demand_atuse)/3650,"name":"Unmet","color":3}
+          
         ]
       },
-      {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650),"saving":0,
+      {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650) + (total_exess/3650),"saving":0,
         "stack":[
           {"kwhd":total_demand_inc_aviation_kwhd,"name":"Demand","color":0},
           {"kwhd":total_losses/3650,"name":"Losses","color":2},
