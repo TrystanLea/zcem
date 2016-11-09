@@ -154,6 +154,17 @@ function national_init()
     ebike_annual_miles = 2000
     ebike_miles_per_kwh = 66
     
+    // Industry
+    industry_electric_twh = 0//171 // TWh
+    industry_gas_twh = 0//61       // TWh
+    industry_liquid_twh = 0//12    // TWh
+    industry_solid_twh = 0//26     // TWh
+    industry_hydrogen_twh = 0   // TWh
+    
+    // number of buildings
+    number_of_buildings = 32*1000000
+    number_of_households = 26*1000000
+    
     view_mode = "supplydemand"
     
     $("#view-stores").click(function(){
@@ -240,15 +251,19 @@ function national_run()
     // Liquid
     total_synthfuel_production = 0
     total_FT_losses = 0
+    total_H2_for_FT = 0
+    total_biomass_for_FT = 0
     
     // Methane
     total_methane_production = 0
     total_sabatier_losses = 0
     unmet_methane_demand = 0
     total_methane_demand = 0
+    total_H2_for_sabatier = 0
+    total_biomass_for_sabatier = 0
     
     // Biomass
-    biomass_requirement = 0
+    total_biomass_for_heat = 0
     
     // CCGT Backup
     total_CCGT_output = 0
@@ -269,6 +284,17 @@ function national_run()
     unmet_aviation_demand = 0
     unmet_liquid_demand = 0
     total_aviation_demand = 0
+    
+    // Industry
+    twh = 1000000000 // twh to kwh
+    
+    industry_electric = (industry_electric_twh * twh) / number_of_households
+    industry_gas = (industry_gas_twh * twh) / number_of_households
+    industry_liquid = (industry_liquid_twh * twh) / number_of_households
+    industry_solid = (industry_solid_twh * twh) / number_of_households
+    industry_hydrogen = (industry_hydrogen_twh * twh) / number_of_households
+    
+    total_industry_electric = 0
 
     data = [];
     data[0] = [];
@@ -370,7 +396,14 @@ function national_run()
         
         balance = supply_after_grid_loss
         demand = 0
-
+        
+        // ---------------------------------------------------------------------------
+        // Industrial electric demand
+        // ---------------------------------------------------------------------------
+        hourly_industry_electric = industry_electric / (365*24)
+        demand += hourly_industry_electric
+        balance -= hourly_industry_electric
+        total_industry_electric += hourly_industry_electric
         // ---------------------------------------------------------------------------
         // Traditional electricity demand
         // ---------------------------------------------------------------------------
@@ -494,7 +527,8 @@ function national_run()
                 
         // Heat from solid
         solid_heat_demand = prc_heat_from_solid * heat_demand
-
+        biomass_for_heat = solid_heat_demand / biomassboiler_efficiency
+        total_biomass_for_heat += biomass_for_heat
         // ---------------------------------------------------------------------------
         // TRANSPORT
         // ---------------------------------------------------------------------------        
@@ -731,10 +765,11 @@ function national_run()
             
             biomass_for_FT = synthfuel / 0.8
             H2_for_FT = biomass_for_FT * 0.5
+            H2_balance -= H2_for_FT
             
             liquid_store_level += synthfuel
-            H2_balance -= H2_for_FT
-            biomass_requirement += biomass_for_FT
+            total_H2_for_FT += H2_for_FT
+            total_biomass_for_FT += biomass_for_FT
             total_synthfuel_production += synthfuel
             total_FT_losses += (synthfuel / (1.6/3.0)) - synthfuel
         }
@@ -754,10 +789,11 @@ function national_run()
             }
             biomass_for_sabatier = methane
             H2_for_sabatier = biomass_for_sabatier * 0.5
+            H2_balance -= H2_for_sabatier
             
             methane_store_level += methane
-            H2_balance -= H2_for_sabatier
-            biomass_requirement += biomass_for_sabatier
+            total_H2_for_sabatier += H2_for_sabatier
+            total_biomass_for_sabatier += biomass_for_sabatier
             total_methane_production += methane
             total_sabatier_losses += (methane / (2/3)) - methane
         }
@@ -913,22 +949,26 @@ function national_run()
     // Biomass and synthetic fuels -------------------------------------------------
     landarea_per_household = 9370 // m2 x 26 million households is 24 Mha
     
-    biomass_landarea_factor = ((1.0/3650)/0.024) / 0.7;
-    
-    // Liquid 
-    biomass_for_synthfuel = total_synthfuel_production / 0.8
-    hydrogen_for_synthfuel = biomass_for_synthfuel * 0.5
-    landarea_for_synthfuel = biomass_for_synthfuel * biomass_landarea_factor
-    prc_landarea_for_synthfuel = 100 * landarea_for_synthfuel / 9231
+    // Liquid
+    // 1.0725 based on 50% miscanthus and 50% SRC with 50% increase increase in yields
+    biomass_landarea_factor = ((1.0/3650)/0.024) / 1.0725
+    landarea_for_FT = total_biomass_for_FT * biomass_landarea_factor
+    prc_landarea_for_FT = 100 * landarea_for_FT / landarea_per_household
    
-    // Methane
-    biomass_for_methane = total_methane_production
-    hydrogen_for_methane = biomass_for_methane * 0.5
-    landarea_for_methane = biomass_for_methane * biomass_landarea_factor
-    prc_landarea_for_methane = 100 * landarea_for_methane / landarea_per_household
+    // Gas: Methane
+    biomass_landarea_factor = ((1.0/3650)/0.024) / 0.51;
+    landarea_for_sabatier = total_biomass_for_sabatier * biomass_landarea_factor
+    prc_landarea_for_sabatier = 100 * landarea_for_sabatier / landarea_per_household
+    
+    // Solid: wood chips, pellets & logs
+    // 0.975 based on 100% SRC with 50% increase in yields
+    biomass_landarea_factor = ((1.0/3650)/0.024) / 0.975;
+    landarea_for_solid = total_biomass_for_heat * biomass_landarea_factor
+    prc_landarea_for_solid = 100 * landarea_for_solid / landarea_per_household
     
     // Total biomass land area required
-    biomass_m2 = biomass_requirement * biomass_landarea_factor
+    biomass_requirement = total_biomass_for_FT + total_biomass_for_sabatier + total_biomass_for_heat
+    biomass_m2 = landarea_for_FT + landarea_for_sabatier + landarea_for_solid
     prc_landarea_for_biomass = 100 * biomass_m2 / landarea_per_household
     
     // Overall transport
@@ -946,7 +986,7 @@ function national_run()
     final_store_levels = liion_SOC + H2_store_level + liquid_store_level + methane_store_level            // + EV_SOC
     starting_store_levels = liion_SOC_start + H2_store_start + methane_store_start + liquid_store_start   // + EV_SOC_start
     total_exess = exess_generation + final_store_levels - starting_store_levels
-
+    
     total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses
     total_unmet_demand = unmet_elec_demand + unmet_methane_demand + unmet_liquid_demand + unmet_demand_atuse
 
@@ -1064,6 +1104,7 @@ function national_run()
           {"kwhd":total_IC_liquid_demand/3650,"name":"IC Cars","color":0},
           {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
           {"kwhd":total_ebike_demand/3650,"name":"E-Bikes","color":0},
+          {"kwhd":total_industry_electric/3650,"name":"Industry","color":0},
           {"kwhd":total_electrolysis_losses/3650,"name":"H2 losses","color":2},
           {"kwhd":total_CCGT_losses/3650,"name":"CCGT losses","color":2},
           {"kwhd":total_FT_losses/3650,"name":"FT losses","color":2},
