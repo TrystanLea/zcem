@@ -36,15 +36,13 @@ function national_init()
     wave_capacity = 0.0
     tidal_capacity = 0.0
     nuclear_capacity = 0.0
-    grid_loss_prc = 0.05
+    grid_loss_prc = 0.00
     
     // ---------------------------------------------------------------------------
-    traditional_electric = 1642
-    hourly_traditional_electric = traditional_electric / 8764.8
     
-    number_of_lights = 10
-    lights_power = 11
-    alwayson = 7
+    number_of_lights = 10.0
+    lights_power = 11.0
+    alwayson = 7.0
     fridgefreezer = 262.0
     washingmachine = 136.0
     cooking = 401.0
@@ -107,7 +105,7 @@ function national_init()
     // miles per kwh includes charge/discharge efficiency of battery (to simplify model)
     EV_miles_per_kwh = 4.0
     EV_battery_capacity = 24.0
-    EV_SOC = EV_battery_capacity * 0.5
+    EV_SOC_start = EV_battery_capacity * 0.5
 
     EV_annual_miles = 6100
     H2EV_annual_miles = 0
@@ -129,21 +127,23 @@ function national_init()
 
     // ---------------------------------------------------------------------------
     liion_capacity = 0
-    liion_SOC = liion_capacity * 0.5
+    liion_SOC_start = liion_capacity * 0.5
     // ---------------------------------------------------------------------------
-    electrolysis_capacity = 2.0
+    electrolysis_capacity = 3.0
     fuel_cell_capacity = 0.0
     
     H2_store_capacity = 10.0
-    H2_store_level = 0
+    H2_store_start = H2_store_capacity * 0.5
     
     FT_fraction = 1.0
     liquid_store_capacity = 280.0
-    liquid_store_level = 0
+    liquid_store_level = 0.0
+    liquid_store_start = liquid_store_capacity * 0.5
     
     sabatier_fraction = 1.0
     methane_store_capacity = 4400.0
-    methane_store_level = 0
+    methane_store_level = 0.0
+    methane_store_start = methane_store_capacity * 0.5
     
     CCGT_capacity = 2.0
     
@@ -162,7 +162,7 @@ function national_init()
 }
 function national_run()
 {
-    // Supply ----------------------------------------------
+    // Electricity Supply
     total_offshore_wind_supply = 0
     total_onshore_wind_supply = 0
     total_solar_supply = 0
@@ -173,10 +173,11 @@ function national_run()
     
     total_grid_losses = 0
     
-    total_supply = 0
-    total_demand = 0
+    total_elec_supply = 0
+    total_elec_demand = 0
     
-    total_trad_elec_demand = 0
+    // Lights appliances and cooking
+    total_LAC_elec_demand = 0
     total_lighting_demand = 0
 
     // DHW Demand
@@ -189,9 +190,8 @@ function national_run()
     total_DHW_heat_demand = 0
     total_DHW_heatpump_elec_demand = 0
     
-    // Space heating ---------------------------------------
+    // Space heating
     average_temperature = 0
-    
     total_space_heating_demand_before_gains = 0
     total_final_space_heating_demand = 0
     
@@ -204,9 +204,7 @@ function national_run()
     total_solar_gains = 0
     total_solar_gains_unused = 0
     
-    total_space_heating_demand = 0
-    
-    
+    // Heating systems
     total_heating_demand = 0
     
     total_heatpump_heat_demand = 0
@@ -216,50 +214,61 @@ function national_run()
     total_gasboiler_heat_demand = 0
     total_gasboiler_gas_demand = 0
     
-    // Electric Vehicles ------------------------------------
+    // Vehicles
     total_EV_demand = 0
-    total_miles_driven = 0
+    EV_SOC = EV_SOC_start
+    
     total_ebike_demand = 0
     
     total_H2EV_hydrogen_demand = 0
     total_H2EV_elec_demand = 0
-    total_H2V_draw_from_store = 0 
+    total_H2V_draw_from_store = 0
+    
     total_IC_liquid_demand = 0
+    
     // Lithium Ion ------------------------------------------
     total_liion_charge = 0
     total_liion_discharge = 0
+    liion_SOC = liion_SOC_start
     
     // Electrolysis -----------------------------------------
     total_electrolysis_demand = 0
     total_electrolysis_losses = 0
     total_fuel_cell_output = 0
+    total_unmet_H2_demand = 0
     
-    exess_generation = 0
-    unmet_demand = 0
-    unmet_demand_atuse = 0
-    hours_met = 0
-    
-    biomass_requirement = 0
+    // Liquid
     total_synthfuel_production = 0
+    total_FT_losses = 0
+    
+    // Methane
     total_methane_production = 0
+    total_sabatier_losses = 0
     unmet_methane_demand = 0
     total_methane_demand = 0
+    
+    // Biomass
+    biomass_requirement = 0
+    
+    // CCGT Backup
     total_CCGT_output = 0
     total_unmet_before_CCGT = 0
     total_CCGT_losses = 0
     
-    total_unmet_H2_demand = 0
-    // Stores -----------------------------------------------
-    H2_store_level = 0
-    liquid_store_level = 50
-    methane_store_level = 300
+    // Stores
+    H2_store_level = H2_store_start
+    liquid_store_level = liquid_store_start
+    methane_store_level = methane_store_start
+    
+    // Unmet
+    exess_generation = 0
+    unmet_elec_demand = 0
+    unmet_demand_atuse = 0
+    hours_met = 0
     
     unmet_aviation_demand = 0
     unmet_liquid_demand = 0
     total_aviation_demand = 0
-    
-    total_FT_losses = 0
-    total_sabatier_losses = 0
 
     data = [];
     data[0] = [];
@@ -345,7 +354,7 @@ function national_run()
         hydro = 0.4 * hydro_capacity // Assuming 40% capacity factor
         nuclear = 0.9 * nuclear_capacity // Assuming 90% uptime
         supply = onshorewind + offshorewind + solarpv + wave + tidal + hydro + nuclear
-        total_supply += supply
+        total_elec_supply += supply
 
         total_offshore_wind_supply += offshorewind
         total_onshore_wind_supply += onshorewind
@@ -379,19 +388,19 @@ function national_run()
         total_lighting_demand += lighting_demand
         
         // Fridge + freezer                 0.72 kWh/d
-        tradelec += fridgefreezer / 8760
+        tradelec += fridgefreezer / 8760.0
         // Washing machine                  0.34 kWh/d
-        tradelec += washingmachine / 8760          
+        tradelec += washingmachine / 8760.0          
         // internet router 7W continuous    0.17 kWh/d
         tradelec += alwayson * 0.001
         // Cooking                          1.1 kWh/d
-        tradelec += (cooking/365) * cooking_profile[hour%24]
+        tradelec += (cooking/365.0) * cooking_profile[hour%24]
         // Laptop                           0.58 kWh/d
-        tradelec += computing / 8760
+        tradelec += computing / 8760.0
         
         balance -= tradelec
         demand += tradelec
-        total_trad_elec_demand += tradelec
+        total_LAC_elec_demand += tradelec
         
         // ---------------------------------------------------------------------------
         // Hot water demand
@@ -512,7 +521,6 @@ function national_run()
         EV_SOC -= EV_discharge
         
         miles = EV_discharge * EV_miles_per_kwh
-        total_miles_driven += miles
 
         if (charge_type=="smartcharge")
         {
@@ -818,9 +826,12 @@ function national_run()
         // ---------------------------------------------------------------------------
         // Backup: Gas power stations
         // ---------------------------------------------------------------------------
-        CCGT_methane = 0
+        // Backup electricity is provided here by conventional gas turbines CCGT
+        // running on synthetic methane or/and biogas. 
+        // CCGT efficiency is assumed to be 50%
+        CCGT_methane = 0.0
         
-        if (balance<0) {
+        if (balance<0.0) {
             total_unmet_before_CCGT += -balance
             CCGT_output = -balance
             CCGT_output = CCGT_output / (1.0-grid_loss_prc)
@@ -850,7 +861,7 @@ function national_run()
         // ---------------------------------------------------------------------------
         // Final balance
         // ---------------------------------------------------------------------------
-        total_demand += demand
+        total_elec_demand += demand
         
         exess = 0
         if (balance>=0) {
@@ -858,7 +869,7 @@ function national_run()
             exess_generation += balance
             hours_met += 1
         } else {
-            unmet_demand += -balance
+            unmet_elec_demand += -balance
         }
 
         var time = datastarttime + (hour * 3600 * 1000);
@@ -872,58 +883,75 @@ function national_run()
         //data[6].push([time, H2_store_level]);
         
     }
+    
+    // ---------------------------------------------------------------------------
+    // Final totals section
+    // ---------------------------------------------------------------------------
+    
+    // LAC
     lighting_utilisation = 100 * total_lighting_demand / (number_of_lights * lights_power * 0.024 * 365 * 10) 
     
-    // Heating ---------------------------------------------------------------------
+    // Hot Water Heating
+    DHW_heatpump_demand = total_DHW_heat_demand / heatpump_COP
+    
+    // Space Heating
     average_temperature = average_temperature / hours
-
     used_metabolic_gains = total_metabolic_gains - total_metabolic_gains_unused
     used_solar_gains = total_solar_gains - total_solar_gains_unused
     used_internal_gains = total_internal_gains - total_internal_gains_unused
     
-    DHW_heatpump_demand = total_DHW_heat_demand / heatpump_COP
-    space_heating_heatpump_demand = total_final_space_heating_demand / heatpump_COP
     spaceheatkwhm2 = (total_final_space_heating_demand*0.1) / total_floor_area
     
+    // Heating systems and heatstore
     heatstore_cycles = 0
     if (heatstore_capacity>0)
         heatstore_cycles = total_heatstore_charge / heatstore_capacity
     
+    // Hydrogen
+    total_H2_produced = total_electrolysis_demand * 0.7
+    
     // Biomass and synthetic fuels -------------------------------------------------
-    landarea_per_household = 9370
+    landarea_per_household = 9370 // m2 x 26 million households is 24 Mha
     
     biomass_landarea_factor = ((1.0/3650)/0.024) / 0.7;
-    total_H2_produced = total_electrolysis_demand * 0.7
+    
+    // Liquid 
     biomass_for_synthfuel = total_synthfuel_production / 0.8
     hydrogen_for_synthfuel = biomass_for_synthfuel * 0.5
     landarea_for_synthfuel = biomass_for_synthfuel * biomass_landarea_factor
     prc_landarea_for_synthfuel = 100 * landarea_for_synthfuel / 9231
    
+    // Methane
     biomass_for_methane = total_methane_production
     hydrogen_for_methane = biomass_for_methane * 0.5
     landarea_for_methane = biomass_for_methane * biomass_landarea_factor
     prc_landarea_for_methane = 100 * landarea_for_methane / landarea_per_household
     
+    // Total biomass land area required
     biomass_m2 = biomass_requirement * biomass_landarea_factor
     prc_landarea_for_biomass = 100 * biomass_m2 / landarea_per_household
     
-    // Overall supply / demand matching -------------------------------------------
-    prc_demand_supplied = ((total_demand - unmet_demand) / total_demand) * 100
-    prc_time_met = (1.0 * hours_met / hours) * 100
-
-    total_supply_inc_biomass = total_supply+biomass_requirement;
-    total_supply_inc_biomass_kwhd = total_supply_inc_biomass / 3650;
-
-    total_demand_inc_aviation = total_demand+total_aviation_demand+total_H2EV_hydrogen_demand+total_IC_liquid_demand+total_gasboiler_gas_demand
-    total_demand_inc_aviation_kwhd = total_demand_inc_aviation / 3650;
-    
-    primary_energy_factor = total_supply_inc_biomass / total_demand_inc_aviation
-    
-    total_exess = exess_generation + methane_store_level + liquid_store_level + H2_store_level
-    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses
-    
+    // Overall transport
     total_transport_demand = total_EV_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand + total_aviation_demand + total_ebike_demand
     
+    // Elec supply / demand matching
+    prc_elec_demand_supplied = ((total_elec_demand - unmet_elec_demand) / total_elec_demand) * 100
+    prc_time_met = (1.0 * hours_met / hours) * 100
+
+    // Overall energy supply / demand matching
+    total_supply = total_elec_supply + biomass_requirement
+    total_demand = total_elec_demand + total_aviation_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand + total_gasboiler_gas_demand
+    primary_energy_factor = total_supply / total_demand
+                                                                                                          // introducing these adds an error in the final balance
+    final_store_levels = liion_SOC + H2_store_level + liquid_store_level + methane_store_level            // + EV_SOC
+    starting_store_levels = liion_SOC_start + H2_store_start + methane_store_start + liquid_store_start   // + EV_SOC_start
+    total_exess = exess_generation + final_store_levels - starting_store_levels
+
+    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses
+    total_unmet_demand = unmet_elec_demand + unmet_methane_demand + unmet_liquid_demand + unmet_demand_atuse
+
+    prc_demand_supplied_all = (((total_demand+total_losses) - total_unmet_demand) / (total_demand+total_losses)) * 100
+
     // ----------------------------------------------------------------------------
     // Embodied Energy
     // ----------------------------------------------------------------------------
@@ -989,19 +1017,22 @@ function national_run()
         $(this).html("<span>"+(1*window[key]*scale).toFixed(dp)+"</span><span style='font-size:90%'>"+units+"</span>");
     });
     
-    total_unmet_demand = (unmet_demand+unmet_methane_demand+unmet_liquid_demand+unmet_demand_atuse)/3650
+
+    // Final balance and error printed to console
+    console.log("TOTAL SUPPLY: "+(total_supply + total_unmet_demand))
+    console.log("TOTAL DEMAND: "+(total_demand + total_losses + total_exess))
+    console.log("ERROR: "+((total_supply+total_unmet_demand)-(total_demand+total_losses+total_exess)))
+    console.log("ERROR: "+((total_supply+total_unmet_demand)-(total_demand+total_losses+total_exess))/3650)
     
-    console.log("TOTAL SUPPLY: "+(total_supply_inc_biomass_kwhd+total_unmet_demand))
-    console.log("TOTAL DEMAND: "+(total_demand_inc_aviation_kwhd + (total_losses/3650) + (total_exess/3650)))
-    console.log("ERROR: "+((total_supply_inc_biomass_kwhd+total_unmet_demand)-(total_demand_inc_aviation_kwhd + (total_losses/3650) + (total_exess/3650))))
-    
+    // Energy stacks visualisation definition
     var stacks = [
-      {"name":"Supply","height":total_supply_inc_biomass_kwhd,"saving":0,
+      {"name":"Supply","height":(total_supply+total_unmet_demand)/3650,"saving":0,
         "stack":[
-          {"kwhd":total_supply_inc_biomass_kwhd,"name":"Supply","color":1}
+          {"kwhd":total_supply/3650,"name":"Supply","color":1},
+          {"kwhd":total_unmet_demand/3650,"name":"Unmet","color":3}
         ]
       },
-      {"name":"Supply","height":total_supply_inc_biomass_kwhd,"saving":0,
+      {"name":"Supply","height":(total_supply+total_unmet_demand)/3650,"saving":0,
         "stack":[
           {"kwhd":total_offshore_wind_supply/3650,"name":"Offshore Wind","color":1},
           {"kwhd":total_onshore_wind_supply/3650,"name":"Onshore Wind","color":1},
@@ -1011,21 +1042,21 @@ function national_run()
           {"kwhd":total_hydro_supply/3650,"name":"Hydro","color":1},
           {"kwhd":total_nuclear_supply/3650,"name":"Nuclear","color":1},
           {"kwhd":biomass_requirement/3650,"name":"Biomass","color":1},
-          {"kwhd":(unmet_demand+unmet_methane_demand+unmet_liquid_demand+unmet_demand_atuse)/3650,"name":"Unmet","color":3}
+          {"kwhd":total_unmet_demand/3650,"name":"Unmet","color":3}
           
         ]
       },
-      {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650) + (total_exess/3650),"saving":0,
+      {"name":"Demand","height":(total_demand+total_losses+total_exess)/3650,"saving":0,
         "stack":[
-          {"kwhd":total_demand_inc_aviation_kwhd,"name":"Demand","color":0},
+          {"kwhd":total_demand/3650,"name":"Demand","color":0},
           {"kwhd":total_losses/3650,"name":"Losses","color":2},
           {"kwhd":total_exess/3650,"name":"Exess","color":3}
         ]
       },
       
-      {"name":"Demand","height":total_demand_inc_aviation_kwhd + (total_losses/3650),"saving":0,
+      {"name":"Demand","height":(total_demand+total_losses)/3650,"saving":0,
         "stack":[
-          {"kwhd":total_trad_elec_demand/3650,"name":"LAC","color":0},
+          {"kwhd":total_LAC_elec_demand/3650,"name":"LAC","color":0},
           {"kwhd":total_heatpump_elec_demand/3650,"name":"Heatpumps","color":0},
           {"kwhd":total_gasboiler_gas_demand/3650,"name":"Gas Boiler","color":0},
           {"kwhd":total_EV_demand/3650,"name":"Electric Cars","color":0},
@@ -1063,7 +1094,6 @@ function national_view(start,end,interval)
             {label: "Traditional electric demand", data:dataout[1], yaxis:1, color:"#00aacc", lines: {lineWidth:0, fill: 1.0 }}, 
             // EV SOC
             {label: "EV SOC", data:dataout[5], yaxis:2, color:"#cc0000", lines: {lineWidth:1, fill: false }},
-            
             // supply
             {label: "Renewable Supply", data:dataout[0], yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
 

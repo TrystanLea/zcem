@@ -103,7 +103,8 @@ function draw_block(ctx,x,mov,kwh,text,c,scale,unit,width,textscale)
 
   if (kwh!=0)
   {
-    seg = kwh*scale; mov -=seg;
+    seg = kwh*scale;
+    mov -=seg;
 
     // Set color
     if (c==0) { fill = "#ffd4d4"; border = "#ff7373"; }				// fossil red
@@ -118,8 +119,13 @@ function draw_block(ctx,x,mov,kwh,text,c,scale,unit,width,textscale)
     ctx.fillStyle = fill; ctx.strokeStyle = border;
 
     // Draw block
-    ctx.fillRect (x, mov, width, seg-4);
-    ctx.strokeRect(x, mov, width, seg-4);
+    if (seg>=4) {
+        ctx.fillRect (x, mov, width, seg-4);
+        ctx.strokeRect(x, mov, width, seg-4);
+    } else {
+        ctx.fillRect (x, mov, width, seg-1);
+        ctx.strokeRect(x, mov, width, seg-1);
+    }
 
     ctx.fillStyle    = "rgba(0, 0, 0, 0.9)";
     ctx.textAlign    = "center";
