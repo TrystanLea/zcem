@@ -23,7 +23,7 @@
 */
 
 
-function national_init()
+function fullhousehold_init()
 {
     unitsmode = "kwhd"
     // ---------------------------------------------------------------------------
@@ -171,7 +171,7 @@ function national_init()
         view_mode = "stores"
     });
 }
-function national_run()
+function fullhousehold_run()
 {
     // Electricity Supply
     total_offshore_wind_supply = 0
@@ -1021,6 +1021,21 @@ function national_run()
         EE_ecar = (24000 / (135000.0/EV_annual_miles)) / 365
         
     embodied_energy_kwhd += EE_ecar
+    
+    // ----------------------------------------------------------------------------
+    // Scaled up to village, town, country scale
+    // ----------------------------------------------------------------------------
+    scaled_onshorewind_capacity = onshorewind_capacity * number_of_households
+    scaled_offshorewind_capacity = offshorewind_capacity * number_of_households
+    scaled_solarpv_capacity = solarpv_capacity * number_of_households  
+    scaled_hydro_capacity = hydro_capacity * number_of_households    
+    scaled_tidal_capacity = tidal_capacity * number_of_households   
+    scaled_wave_capacity = wave_capacity * number_of_households   
+    scaled_nuclear_capacity = nuclear_capacity * number_of_households   
+       
+    scaled_landarea_for_sabatier = landarea_for_sabatier * number_of_households
+    scaled_landarea_for_FT = landarea_for_FT * number_of_households
+    scaled_landarea_for_solid = landarea_for_solid * number_of_households
        
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
@@ -1052,6 +1067,21 @@ function national_run()
                 units = " kWh/y"
                 dp = 0
             }
+        } else if(type=="auto") {
+            var baseunit = $(this).attr("baseunit");
+            
+            if (baseunit=="kW") {
+                scale = 1; units = " kW"; dp = 0;
+                if (window[key]>=10000) {scale=0.001; units=" MW"; dp=0;}
+                if (window[key]>=10000000) {scale=0.000001; units=" GW"; dp=0;}
+            }
+
+            if (baseunit=="m2") {
+                scale = 1; units = " m2"; dp = 0;
+                if (window[key]>=10000*10) {scale=0.0001; units=" ha"; dp=0;}
+                if (window[key]>=10000*10*1000) {scale=0.0001*0.001; units=" kha"; dp=0;}
+                if (window[key]>=10000*10*1000*1000) {scale=0.0001*0.001*0.001; units=" Mha"; dp=0;}
+            } 
         }
         
         $(this).html("<span>"+(1*window[key]*scale).toFixed(dp)+"</span><span style='font-size:90%'>"+units+"</span>");
@@ -1118,7 +1148,7 @@ function national_run()
 }
 // ---------------------------------------------------------------------------    
 	
-function national_view(start,end,interval)
+function fullhousehold_view(start,end,interval)
 {
     var dataout = data_view(start,end,interval);
     

@@ -573,8 +573,45 @@ table td {
 </div>
 
 <div class="box">
+    <div class="box-title">
+        <img class="icon-expand" src="img/expand.png"><b>SCALED UP TO VILLAGE, TOWN, CITY or COUNTRY
+        </b>
+    </div>
+    <div class="inner">
+        
+        <table><tr>
+        <td>Number of households:</td>
+        <td><input class="modelinput" key="number_of_households" type="text" style="width:100px" value="" autocomplete="off"/></td>
+        </tr></table>
+        <br>
+        <table>
+            <tr><th>Supply</th><th width="100px"></th><th>Land use</th><th></th></tr>
+            <tr>
+                <td>Onshore Wind</td><td><span class="modeloutput" key="scaled_onshorewind_capacity" type="auto" baseunit="kW"></td>
+                <td>Rotational grasses for synthetic methane gas</td><td><span class="modeloutput" key="scaled_landarea_for_sabatier" type="auto" baseunit="m2"></td>
+            </tr>
+            <tr>
+                <td>Offshore Wind</td><td><span class="modeloutput" key="scaled_offshorewind_capacity" type="auto" baseunit="kW"></td>
+                <td>Miscanthus & Short Rotation Coppice for synthetic liquid fuel</td><td><span class="modeloutput" key="scaled_landarea_for_FT" type="auto" baseunit="m2"></td>
+            </tr>
+            <tr>
+                <td>Solar PV</td><td><span class="modeloutput" key="scaled_solarpv_capacity" type="auto" baseunit="kW"></td>
+                <td>Short Rotation Coppice for solid fuel</td><td><span class="modeloutput" key="scaled_landarea_for_solid" type="auto" baseunit="m2"></td>
+            </tr>
+            <tr><td>Hydro</td><td><span class="modeloutput" key="scaled_hydro_capacity" type="auto" baseunit="kW"></td></tr>
+            <tr><td>Wave</td><td><span class="modeloutput" key="scaled_wave_capacity" type="auto" baseunit="kW"></td></tr>
+            <tr><td>Tidal</td><td><span class="modeloutput" key="scaled_tidal_capacity" type="auto" baseunit="kW"></td></tr>
+            <tr><td>Nuclear</td><td><span class="modeloutput" key="scaled_nuclear_capacity" type="auto" baseunit="kW"></td></tr>
+        </tr>
+        </table>
+        
+        <div style="clear:both"></div>
+    </div>
+</div>
+
+<div class="box">
     <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>EMBODIED ENERGY<span style="float:right" class="modeloutput" key="embodied_energy_kwhd" dp=1 scale=1 units="kWh/d"></span> </b></div>
-    <div class="inner" style="display:block">
+    <div class="inner">
         <table style="width:50%; float:left">
         <tr><td>Onshore wind</td><td><span class="modeloutput" key="EE_onshorewind" type="1d"></span></td></tr>
         <tr><td>Offshore wind</td><td><span class="modeloutput" key="EE_offshorewind" type="1d"></span></td></tr>
