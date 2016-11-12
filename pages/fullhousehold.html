@@ -64,7 +64,9 @@ table td {
         <button id="zoom-out">-</button>
         <button id="zoom-in">+</button>
         <button id="reset">reset</button>
-
+        <button class="viewmode" view="">Electricity Balance</button>
+        <button class="viewmode" view="stores">Stores</button>
+        
         <div id="placeholder_bound" style="width:100%">
             <div id="placeholder"></div>
         </div>
@@ -336,10 +338,20 @@ table td {
             <td><span class="modeloutput" key="total_gasboiler_gas_demand" type="10y"></span></td>
         </tr>
         <tr>
+            <td>Synth fuel Boilers</td>
+            <td><input class="modelinput" key="prc_heat_from_liquid" type="text" style="width:40px" value="" autocomplete="off"/></td>
+            <td></td>
+            <td><input class="modelinput" key="synthfuelboiler_efficiency" type="text" style="width:40px" value="" autocomplete="off"/>%</td>
+            <td><span class="modeloutput" key="total_synthfuelboiler_heat_demand" type="10y"></span></td>
+            <td><span class="modeloutput" key="total_synthfuelboiler_fuel_demand" type="10y"></span></td>
+        </tr>
+        <tr>
             <td>Biomass Boilers</td>
             <td><input class="modelinput" key="prc_heat_from_solid" type="text" style="width:40px" value="" autocomplete="off"/></td>
             <td></td>
             <td><input class="modelinput" key="biomassboiler_efficiency" type="text" style="width:40px" value="" autocomplete="off"/>%</td>
+            <td><span class="modeloutput" key="total_biomassboiler_heat_demand" type="10y"></span></td>
+            <td><span class="modeloutput" key="total_biomassboiler_biomass_demand" type="10y"></span></td>
         </tr>
         </table>
         <p>Note: Ensure that the sum of heating system fractions add up to 1.0 to ensure that heat is not under or oversupplied.</p>

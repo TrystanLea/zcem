@@ -16,6 +16,8 @@ var timerStart = Date.now();
 var view_html = {};
 var view_desc = {};
 
+view_mode = "";
+
 var datastarttime = 32*365.25*24*3600*1000;
 start = datastarttime;
 end = datastarttime + 10*24*365*3600*1000;
@@ -103,9 +105,17 @@ function load_page(page)
 
 $("#model").on("change",".modelinput",function(){
     var varkey = $(this).attr("key");
-    window[varkey] = $(this).val();
+    window[varkey] = 1*$(this).val();
     var run_fn = page+"_run";
     if (window[run_fn]!=undefined) window[run_fn]();
+    var view_fn = page+"_view";
+    if (window[view_fn]!=undefined) window[view_fn](start,end,interval);
+});
+
+$("#model").on("click",".viewmode",function(){
+    
+    view_mode = $(this).attr("view");
+    
     var view_fn = page+"_view";
     if (window[view_fn]!=undefined) window[view_fn](start,end,interval);
 });

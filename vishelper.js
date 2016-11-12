@@ -120,10 +120,9 @@ function data_view(start,end,interval)
     interval = Math.round(interval);
     if (interval<1) interval = 1;
     
-    var datasetnum = data.length;
     
     var dataout = [];
-    for (z=0; z<datasetnum; z++) dataout[z] = [];
+    for (var z in data) dataout[z] = [];
     
     var i = 0;
     var time = 0;
@@ -132,7 +131,7 @@ function data_view(start,end,interval)
         time = start + (interval * i);
         pos = Math.round((time-datastarttime)/3600000);
         
-        for (z=0; z<datasetnum; z++) {
+        for (var z in data) {
             if (pos>=0 && pos<data[z].length) {
                 dataout[z].push([data[z][pos][0],data[z][pos][1]]);  
             }
