@@ -96,7 +96,9 @@ function load_page(page)
     
     $(".modelinput").each(function(){
         var varkey = $(this).attr("key");
-        $(this).val(window[varkey]);
+        var inputtype = $(this).attr("type");
+        if (inputtype=="text") $(this).val(window[varkey]);
+        if (inputtype=="checkbox") $(this)[0].checked = window[varkey];
     });
     
     $("#sourcecode").hide();
@@ -105,7 +107,11 @@ function load_page(page)
 
 $("#model").on("change",".modelinput",function(){
     var varkey = $(this).attr("key");
-    window[varkey] = 1*$(this).val();
+    var inputtype = $(this).attr("type");
+    
+    if (inputtype=="text") window[varkey] = 1*$(this).val();
+    if (inputtype=="checkbox") window[varkey] = 1*$(this)[0].checked;
+    
     var run_fn = page+"_run";
     if (window[run_fn]!=undefined) window[run_fn]();
     var view_fn = page+"_view";

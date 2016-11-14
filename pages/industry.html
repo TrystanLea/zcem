@@ -56,7 +56,7 @@ table td {
 </style>
 
 <div class="box">
-    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>FULL HOUSEHOLD ENERGY MODEL</b></div>
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>FULL HOUSEHOLD & INDUSTRY ENERGY MODEL</b></div>
     <div class="inner" style="display:block">
         View:
         <button id="pan-left"><</button>
@@ -505,14 +505,6 @@ table td {
 </div>
 <div style="clear:both"></div>
 <p>Biomass feedstock for the synthetic fuel production is a mix of miscanthus and short rotation coppice at 1.07 W/m2 including a 50% increase in yield as suggested by the ZeroCarbonBritain report.</p>
-
-<table>
-<tr>
-    <td><input class="modelinput" key="supply_unmet_liquid_from_direct_biomass" type="checkbox" style="width:100px" value="" autocomplete="off"/></td>
-    <td>Supply unmet liquid demand from less efficient direct biomass to biofuel process (50% efficiency)</td>
-</tr>
-</table>
-
 </div></div>
 <div class="box">
     <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SYNTHETIC METHANE<span style="float:right" class="modeloutput" key="prc_landarea_for_sabatier" dp=1 units="%"></span></b></div>
@@ -540,13 +532,6 @@ table td {
         </div>
         <div style="clear:both"></div>
         <p>Biomass feedstock for the synthetic methane production is rotation grasses at 0.51 W/m2 which are used for anarobic digestion first with co2 + methane output combined with hydrogen to produce a richer methane output</p>
-        
-        <table>
-        <tr>
-            <td><input class="modelinput" key="supply_unmet_gas_from_direct_biomass" type="checkbox" style="width:100px" value="" autocomplete="off"/></td>
-            <td>Supply unmet gas demand from less efficient anaerobic digestion without renewable hydrogen enhanced hydrogen sabatier process (60% biomass to biogas efficiency)</td>
-        </tr>
-        </table>
     </div>
 </div>
 
@@ -555,10 +540,8 @@ table td {
     <div class="inner">
         <div style="float:left;">
             <p>Total biomass required: <span class="modeloutput" key="biomass_requirement" type="10y"></span></p>
-            <p>Biomass for liquid fuel FT: <span class="modeloutput" key="landarea_for_FT" dp=0 scale=1 units="m2"></span> (<span class="modeloutput" key="prc_landarea_for_FT" dp=1></span>% of UK land area)</p>
-            <p>Biomass for liquid fuel direct: <span class="modeloutput" key="landarea_for_direct_liquid" dp=0 scale=1 units="m2"></span> (<span class="modeloutput" key="prc_landarea_for_direct_liquid" dp=1></span>% of UK land area)</p>
-            <p>Biomass for methane sabatier: <span class="modeloutput" key="landarea_for_sabatier" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_sabatier" dp=1></span>% of UK land area)</p>
-            <p>Biomass for methane direct: <span class="modeloutput" key="landarea_for_direct_gas" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_direct_gas" dp=1></span>% of UK land area)</p>
+            <p>Biomass for liquid fuel: <span class="modeloutput" key="landarea_for_FT" dp=0 scale=1 units="m2"></span> (<span class="modeloutput" key="prc_landarea_for_FT" dp=1></span>% of UK land area)</p>
+            <p>Biomass for methane: <span class="modeloutput" key="landarea_for_sabatier" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_sabatier" dp=1></span>% of UK land area)</p>
             <p>Total biomass: <span class="modeloutput" key="biomass_m2" dp=0></span> m2 (<span class="modeloutput" key="prc_landarea_for_biomass" dp=1></span>% of UK land area)</p>
             <p>The total land area of the UK is 24.361 million hectares. Divided by the total number of households in the UK this works out to being 9370 m2 per household. The ZeroCarbonBritain scenario allocates 3186 m2 (34%) for food production, 3092 m2 (33%) for carbon capture, 937 m2 (10%) for conservation, 562 m2 (6%) urban, leaving 1593 m2 (17%) for fuel and energy.</p>
         </div>
@@ -569,29 +552,18 @@ table td {
 <div class="box">
     <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>BACKUP GAS TURBINES<span style="float:right" class="modeloutput" key="total_CCGT_output" type="10y"></span></b></div>
     <div class="inner">
-
-        <table class="table" style="width:50%; float:left">
-        <tr>
-            <td>CCGT Capacity:</td>
-            <td><input class="modelinput" key="CCGT_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
-        </tr>
-        </table>
-        
         <div style="float:left;">
             <p>Total unmet demand before CCGT backup: <span class="modeloutput" key="total_unmet_before_CCGT" type="10y"></span></p>
             <p>Total CCGT output: <span class="modeloutput" key="total_CCGT_output" type="10y"></span></p>
-            <p>Max CCGT output: <span class="modeloutput" key="max_CCGT_output" dp=3 scale=1 units="kW"></span></p>
         </div>
         <div style="clear:both"></div>
-        
-        <p>Note: the model does not yet contain a mechanism to use short term storage such as lithium ion in order to reduce peak demand and therefore CCGT capacity requirements, this will be added in future to allow for charging of lithium ion stores at times of low peak demand even if power is coming from CCGT backup at low capacity in order to then reduce the peak capacity requirements later in the day.</p>
     </div>
 </div>
 
 <div class="box">
     <div class="box-title">
         <img class="icon-expand" src="img/expand.png"><b>FINAL SUPPLY DEMAND MATCHING
-        <span style="float:right" class="modeloutput" key="prc_demand_supplied_all" dp=3 scale=1 units="%"></span>
+        <span style="float:right" class="modeloutput" key="prc_demand_supplied_all" dp=1 scale=1 units="%"></span>
         </b>
     </div>
     <div class="inner" style="display:block">
@@ -625,7 +597,7 @@ table td {
         </tr></table>
         <br>
         <table>
-            <tr><th>Supply</th><th width="100px"></th><th>Land use</th><th width="100px"></th></tr>
+            <tr><th>Supply</th><th width="100px"></th><th>Land use</th><th></th></tr>
             <tr>
                 <td>Onshore Wind</td><td><span class="modeloutput" key="scaled_onshorewind_capacity" type="auto" baseunit="kW"></td>
                 <td>Rotational grasses for synthetic methane gas</td><td><span class="modeloutput" key="scaled_landarea_for_sabatier" type="auto" baseunit="m2"></td>
@@ -639,47 +611,39 @@ table td {
                 <td>Short Rotation Coppice for solid fuel</td><td><span class="modeloutput" key="scaled_landarea_for_solid" type="auto" baseunit="m2"></td>
             </tr>
             <tr><td>Hydro</td><td><span class="modeloutput" key="scaled_hydro_capacity" type="auto" baseunit="kW"></td></tr>
-            <tr><td>Wave</td><td><span class="modeloutput" key="scaled_wave_capacity" type="auto" baseunit="kW"></td><th>Stores</th></tr>
-            <tr>
-                <td>Tidal</td><td><span class="modeloutput" key="scaled_tidal_capacity" type="auto" baseunit="kW"></td>
-                <td>Hydrogen store</td><td><span class="modeloutput" key="scaled_H2_store_capacity" type="auto" baseunit="kWh"></td>
-            </tr>
-            <tr>
-                <td>Nuclear</td><td><span class="modeloutput" key="scaled_nuclear_capacity" type="auto" baseunit="kW"></td>
-                <td>Liquid store</td><td><span class="modeloutput" key="scaled_liquid_store_capacity" type="auto" baseunit="kWh"></td>
-            </tr>
-            <tr>
-                <td>CCGT Backup</td><td><span class="modeloutput" key="scaled_CCGT_capacity" type="auto" baseunit="kW"></td>
-                <td>Methane store</td><td><span class="modeloutput" key="scaled_methane_store_capacity" type="auto" baseunit="kWh"></td>
-            </tr>
+            <tr><td>Wave</td><td><span class="modeloutput" key="scaled_wave_capacity" type="auto" baseunit="kW"></td></tr>
+            <tr><td>Tidal</td><td><span class="modeloutput" key="scaled_tidal_capacity" type="auto" baseunit="kW"></td></tr>
+            <tr><td>Nuclear</td><td><span class="modeloutput" key="scaled_nuclear_capacity" type="auto" baseunit="kW"></td></tr>
             
-            <tr><th></th><th></th></tr>
-            <tr><th>Demand</th><th></th><th>Other</th><th></th></tr>
+            <tr><th>Stores</th><th></th><th>Demand</th><th></th></tr>
 
-            <tr> 
+            <tr>
+                <td>Hydrogen store</td><td><span class="modeloutput" key="scaled_H2_store_capacity" type="auto" baseunit="kWh"></td>
                 <td>Lights, Appliances & Cooking</td><td><span class="modeloutput" key="scaled_total_LAC_elec_demand" type="auto" baseunit="kWh"></td>
-                <td>Electrolysis capacity</td><td><span class="modeloutput" key="scaled_electrolysis_capacity" type="auto" baseunit="kW"></td>
             </tr>
             <tr>
+                <td>Liquid store</td><td><span class="modeloutput" key="scaled_liquid_store_capacity" type="auto" baseunit="kWh"></td>
                 <td>Electricity for heatpumps</td><td><span class="modeloutput" key="scaled_total_heatpump_elec_demand" type="auto" baseunit="kWh"></td>
             </tr>
             <tr>
+                <td>Methane store</td><td><span class="modeloutput" key="scaled_methane_store_capacity" type="auto" baseunit="kWh"></td>
                 <td>Electric Vehicles</td><td><span class="modeloutput" key="scaled_total_EV_demand" type="auto" baseunit="kWh"></td>
             </tr>
             <tr>
+                <td></td><td></td>
                 <td>Electricity for electrolysis</td><td><span class="modeloutput" key="scaled_total_electrolysis_demand" type="auto" baseunit="kWh"></td>
             </tr>
             <tr>
+                <td></td><td></td>
                 <td>Electricity for export</td><td><span class="modeloutput" key="scaled_exess_generation" type="auto" baseunit="kWh"></td>
             </tr>
             <tr>
+                <td></td><td></td>
                 <td>Synthetic liquid fuels</td><td><span class="modeloutput" key="scaled_total_liquid_demand" type="auto" baseunit="kWh"></td>
             </tr>
         </table>
         
         <div style="clear:both"></div>
-        <p>For comparison ZeroCarbonBritain scenario capacities:<br>
-        <i>Offshore Wind: 140GW, Onshore Wind: 20GW, Solar PV: 70GW, Electrolysis: 35GW, Hydrogen storage: 20,000 GWh, Salt caverns can store several 100 GWh of hydrogen, Backup CCGT: 45GW, Methane storage: 60,000 GWh e.g: rough gas store yorkshire 35,000 GWh, Pumped hydro: 25 GWh, V2G: 25 GWh, Heat storage: 100 GWh</i></p>
     </div>
 </div>
 
@@ -696,7 +660,7 @@ table td {
         <tr><td>Emodied Energy Estimate</td><td><span class="modeloutput" key="embodied_energy_kwhd" dp=1 scale=1 units="kWh/d"></span></td></tr>
         </table>
         <div style="float:left; width:45%">
-        <p><b>Note: </b> The embodied energy calculations here are very rough and likely to contain large errors, this section is a provisional addition of an important area to understand and consider to be further developed with time. There are still a number of technologies used above that need to be added to this list.</p><p>The embodied energy estimate here can be used to flag up scenarios that use unrealistic levels of embodied energy such as lithium ion stores above a couple of 100 kWh/household</p><p>Embodied energy demand needs to be divided into electricity, liquid and gas fuel demand and then placed into the wider model so that they are considered alongside all other demands in the supply/demand matching model above</p>
+        <p><b>Note: </b> The embodied energy calculations here are very rough and likely to contain large errors, this section is a provisional addition of an important area to understand and consider to be further developed with time.</p><p>Embodied energy demand needs to be divided into electricity, liquid and gas fuel demand and then placed into the wider model so that they are considered alongside all other demands in the supply/demand matching model above</p>
         </div>
         <div style="clear:both"></div>
     </div>

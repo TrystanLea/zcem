@@ -23,18 +23,18 @@
 */
 
 
-function fullhousehold_init()
+function industry_init()
 {
     unitsmode = "kwhd"
     // ---------------------------------------------------------------------------
     // dataset index:
     // 0:onshore wind, 1:offshore wind, 2:wave, 3:tidal, 4:solar, 5:traditional electricity
-    onshorewind_capacity = 1.87
-    offshorewind_capacity = 0.0
-    solarpv_capacity = 1.87
-    hydro_capacity = 0.0
-    wave_capacity = 0.0
-    tidal_capacity = 0.0
+    onshorewind_capacity = 0.769
+    offshorewind_capacity = 5.385
+    solarpv_capacity = 2.692
+    hydro_capacity = 0.115
+    wave_capacity = 0.385
+    tidal_capacity = 0.769
     nuclear_capacity = 0.0
     grid_loss_prc = 0.05
     
@@ -84,7 +84,7 @@ function fullhousehold_init()
    
     target_internal_temperature = 18.0
     night_time_setback = 16.0
-    heatpump_COP = 3.0
+    heatpump_COP = 2.3
 
     heatstore_capacity = 10
     heatstore = heatstore_capacity * 0.5
@@ -108,7 +108,7 @@ function fullhousehold_init()
 
     EV_annual_miles = 6100
     H2EV_annual_miles = 0
-    IC_annual_miles = 0
+    IC_annual_miles = 3200
     
     H2EV_miles_per_kwh = 1.1
     IC_MPG = 60
@@ -128,23 +128,21 @@ function fullhousehold_init()
     liion_capacity = 0
     liion_SOC_start = liion_capacity * 0.5
     // ---------------------------------------------------------------------------
-    electrolysis_capacity = 1.35
+    electrolysis_capacity = 3.0
     fuel_cell_capacity = 0.0
     
-    H2_store_capacity = 10.0
+    H2_store_capacity = 400.0
     H2_store_start = H2_store_capacity * 0.5
     
     FT_fraction = 1.0
-    liquid_store_capacity = 300.0
+    liquid_store_capacity = 400.0
     liquid_store_start = liquid_store_capacity * 0.5
-    supply_unmet_liquid_from_direct_biomass = 1
     
     sabatier_fraction = 1.0
-    methane_store_capacity = 2500.0
+    methane_store_capacity = 2350.0 // x 26m = 60,000 GWh 
     methane_store_start = methane_store_capacity * 0.5
-    supply_unmet_gas_from_direct_biomass = 1
     
-    CCGT_capacity = 1.5
+    CCGT_capacity = 2.0
     
     // Aviation
     aviation_miles_per_kwh = 1.3  // passenger miles per kwh based on 50 kWh per 100p/km
@@ -154,10 +152,10 @@ function fullhousehold_init()
     ebike_miles_per_kwh = 66
     
     // Industry
-    industry_electric_twh = 0//171 // TWh
-    industry_gas_twh = 0//61       // TWh
-    industry_liquid_twh = 0//12    // TWh
-    industry_solid_twh = 0//26     // TWh
+    industry_electric_twh = 171 // TWh
+    industry_gas_twh = 61       // TWh
+    industry_liquid_twh = 12    // TWh
+    industry_solid_twh = 26     // TWh
     industry_hydrogen_twh = 0   // TWh
     
     // number of buildings
@@ -165,7 +163,7 @@ function fullhousehold_init()
     number_of_households = 26*1000000
 }
 
-function fullhousehold_run()
+function industry_run()
 {
     // Electricity Supply
     total_offshore_wind_supply = 0
@@ -262,7 +260,6 @@ function fullhousehold_run()
     total_CCGT_output = 0
     total_unmet_before_CCGT = 0
     total_CCGT_losses = 0
-    max_CCGT_output = 0
     
     // Stores
     H2_store_level = H2_store_start * 1
@@ -289,6 +286,8 @@ function fullhousehold_run()
     industry_hydrogen = (industry_hydrogen_twh * twh) / number_of_households
     
     total_industry_electric = 0
+    total_industry_gas = 0
+    total_industry_liquid = 0
 
     data = {
         supply:[],
@@ -831,8 +830,11 @@ function fullhousehold_run()
         hourly_aviation_demand = (aviation_miles / aviation_miles_per_kwh) / (365.0 * 24.0)
         total_aviation_demand += hourly_aviation_demand
         
+        hourly_industry_liquid = industry_liquid / (365*24)
+        total_industry_liquid += hourly_industry_liquid
+        
         // Liquid store
-        liquid_demand = hourly_aviation_demand + synthfuel_for_heat + IC_liquid_demand
+        liquid_demand = hourly_aviation_demand + synthfuel_for_heat + IC_liquid_demand + hourly_industry_liquid
         total_liquid_demand += liquid_demand
         
         if ((liquid_store_level-liquid_demand)<0) {
@@ -878,8 +880,6 @@ function fullhousehold_run()
             
             balance += CCGT_output
             
-            if (CCGT_output>max_CCGT_output) max_CCGT_output = CCGT_output;
-            
             total_grid_losses += CCGT_output * grid_loss_prc
             total_CCGT_output += CCGT_output
             total_CCGT_losses += CCGT_output
@@ -888,7 +888,10 @@ function fullhousehold_run()
         // ---------------------------------------------------------------------------
         // Methane store demand
         // ---------------------------------------------------------------------------  
-        methane_demand = CCGT_methane + methane_for_heat
+        hourly_industry_gas = industry_gas / (365*24)
+        total_industry_gas += hourly_industry_gas
+        
+        methane_demand = CCGT_methane + methane_for_heat + hourly_industry_gas
         total_methane_demand += methane_demand
         
         if ((methane_store_level-methane_demand)>=0) {
@@ -926,25 +929,6 @@ function fullhousehold_run()
         data.liquid_store_level.push([time,liion_SOC+H2_store_level+liquid_store_level]);
         data.methane_store_level.push([time,liion_SOC+H2_store_level+liquid_store_level+methane_store_level]);
     }
-    // ---------------------------------------------------------------------------
-    // Less efficient provision of any unmet biogas and biofuels from biomass
-    // without supplimentary hydrogen
-    // ---------------------------------------------------------------------------
-    total_biomass_for_direct_gas = 0
-    total_direct_gas_losses =0
-    if (supply_unmet_gas_from_direct_biomass) {
-        total_biomass_for_direct_gas = unmet_methane_demand/0.6
-        total_direct_gas_losses = total_biomass_for_direct_gas - unmet_methane_demand
-        unmet_methane_demand = 0
-    }
-    
-    total_biomass_for_direct_liquid = 0
-    total_direct_liquid_losses = 0
-    if (supply_unmet_liquid_from_direct_biomass) {
-        total_biomass_for_direct_liquid = unmet_liquid_demand/0.5
-        total_direct_liquid_losses = total_biomass_for_direct_liquid - unmet_liquid_demand
-        unmet_liquid_demand = 0
-    }
     
     // ---------------------------------------------------------------------------
     // Final totals section
@@ -980,29 +964,23 @@ function fullhousehold_run()
     biomass_landarea_factor = ((1.0/3650)/0.024) / 1.0725
     landarea_for_FT = total_biomass_for_FT * biomass_landarea_factor
     prc_landarea_for_FT = 100 * landarea_for_FT / landarea_per_household
-
-    // less efficient direct method
-    landarea_for_direct_liquid = total_biomass_for_direct_liquid * biomass_landarea_factor
-    prc_landarea_for_direct_liquid = 100 * landarea_for_direct_liquid / landarea_per_household
-
+   
     // Gas: Methane
     biomass_landarea_factor = ((1.0/3650)/0.024) / 0.51;
     landarea_for_sabatier = total_biomass_for_sabatier * biomass_landarea_factor
     prc_landarea_for_sabatier = 100 * landarea_for_sabatier / landarea_per_household
     
-    // less efficient direct method
-    landarea_for_direct_gas = total_biomass_for_direct_gas * biomass_landarea_factor
-    prc_landarea_for_direct_gas = 100 * landarea_for_direct_gas / landarea_per_household
-    
     // Solid: wood chips, pellets & logs
     // 0.975 based on 100% SRC with 50% increase in yields
+    total_industry_solid = industry_solid * 10
+    total_solid_biomass_demand = total_biomassboiler_biomass_demand + total_industry_solid
     biomass_landarea_factor = ((1.0/3650)/0.024) / 0.975;
-    landarea_for_solid = total_biomassboiler_biomass_demand * biomass_landarea_factor
+    landarea_for_solid = total_solid_biomass_demand * biomass_landarea_factor
     prc_landarea_for_solid = 100 * landarea_for_solid / landarea_per_household
     
     // Total biomass land area required
-    biomass_requirement = total_biomass_for_FT + total_biomass_for_sabatier + total_biomassboiler_biomass_demand + total_biomass_for_direct_gas + total_biomass_for_direct_liquid
-    biomass_m2 = landarea_for_FT + landarea_for_sabatier + landarea_for_solid + landarea_for_direct_gas + landarea_for_direct_liquid
+    biomass_requirement = total_biomass_for_FT + total_biomass_for_sabatier + total_solid_biomass_demand
+    biomass_m2 = landarea_for_FT + landarea_for_sabatier + landarea_for_solid
     prc_landarea_for_biomass = 100 * biomass_m2 / landarea_per_household
     
     // Overall transport
@@ -1016,14 +994,15 @@ function fullhousehold_run()
     total_supply = total_elec_supply + biomass_requirement
     
     total_demand = total_elec_demand + total_aviation_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand
-    total_demand += total_gasboiler_gas_demand + total_biomassboiler_biomass_demand + total_synthfuelboiler_fuel_demand
+    total_demand += total_industry_gas + total_industry_liquid
+    total_demand += total_gasboiler_gas_demand + total_solid_biomass_demand + total_synthfuelboiler_fuel_demand
     
     primary_energy_factor = total_supply / total_demand
                                                                                                           // introducing these adds an error in the final balance
     final_store_levels = liion_SOC + H2_store_level + liquid_store_level + methane_store_level            // + EV_SOC
     starting_store_levels = (1*liion_SOC_start) + (1*H2_store_start) + (1*methane_store_start) + (1*liquid_store_start)   // + EV_SOC_start
     total_exess = exess_generation + final_store_levels - starting_store_levels
-    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses + total_direct_gas_losses + total_direct_liquid_losses
+    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses
     total_unmet_demand = unmet_elec_demand + unmet_methane_demand + unmet_liquid_demand + unmet_demand_atuse
 
     prc_demand_supplied_all = (((total_demand+total_losses) - total_unmet_demand) / (total_demand+total_losses)) * 100
@@ -1068,10 +1047,7 @@ function fullhousehold_run()
     scaled_tidal_capacity = tidal_capacity * number_of_households   
     scaled_wave_capacity = wave_capacity * number_of_households   
     scaled_nuclear_capacity = nuclear_capacity * number_of_households   
-    scaled_CCGT_capacity = CCGT_capacity * number_of_households
-    
-    scaled_electrolysis_capacity = electrolysis_capacity * number_of_households
-          
+       
     scaled_landarea_for_sabatier = landarea_for_sabatier * number_of_households
     scaled_landarea_for_FT = landarea_for_FT * number_of_households
     scaled_landarea_for_solid = landarea_for_solid * number_of_households
@@ -1086,7 +1062,6 @@ function fullhousehold_run()
     scaled_total_electrolysis_demand = (total_electrolysis_demand/10) * number_of_households
     scaled_exess_generation = (exess_generation/10) * number_of_households
     scaled_total_liquid_demand = (total_liquid_demand/10) * number_of_households
-
     
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
@@ -1194,13 +1169,14 @@ function fullhousehold_run()
           {"kwhd":total_IC_liquid_demand/3650,"name":"IC Cars","color":0},
           {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
           {"kwhd":total_ebike_demand/3650,"name":"E-Bikes","color":0},
-          {"kwhd":total_industry_electric/3650,"name":"Industry","color":0},
+          {"kwhd":total_industry_electric/3650,"name":"Industry Electric","color":0},
+          {"kwhd":total_industry_gas/3650,"name":"Industry Gas","color":0},
+          {"kwhd":total_industry_liquid/3650,"name":"Industry Liquid","color":0},
+          {"kwhd":total_industry_solid/3650,"name":"Industry Biomass","color":0},
           {"kwhd":total_electrolysis_losses/3650,"name":"H2 losses","color":2},
           {"kwhd":total_CCGT_losses/3650,"name":"CCGT losses","color":2},
           {"kwhd":total_FT_losses/3650,"name":"FT losses","color":2},
           {"kwhd":total_sabatier_losses/3650,"name":"Sabatier losses","color":2},
-          {"kwhd":total_direct_gas_losses/3650,"name":"Direct gas loss","color":2},
-          {"kwhd":total_direct_liquid_losses/3650,"name":"Direct liquid loss","color":2},
           {"kwhd":total_grid_losses/3650,"name":"Grid losses","color":2},
           {"kwhd":total_exess/3650,"name":"Exess","color":3}
         ]
@@ -1210,7 +1186,7 @@ function fullhousehold_run()
 }
 // ---------------------------------------------------------------------------    
 	
-function fullhousehold_view(start,end,interval)
+function industry_view(start,end,interval)
 {
     var dataout = data_view(start,end,interval);
     
