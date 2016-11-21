@@ -97,8 +97,12 @@ function load_page(page)
     $(".modelinput").each(function(){
         var varkey = $(this).attr("key");
         var inputtype = $(this).attr("type");
-        if (inputtype=="text") $(this).val(window[varkey]);
-        if (inputtype=="checkbox") $(this)[0].checked = window[varkey];
+        
+        if (inputtype=="checkbox") {
+            $(this)[0].checked = window[varkey];
+        } else {
+            $(this).val(window[varkey]);
+        }
     });
     
     $("#sourcecode").hide();
@@ -109,8 +113,13 @@ $("#model").on("change",".modelinput",function(){
     var varkey = $(this).attr("key");
     var inputtype = $(this).attr("type");
     
-    if (inputtype=="text") window[varkey] = 1*$(this).val();
-    if (inputtype=="checkbox") window[varkey] = 1*$(this)[0].checked;
+    if (inputtype=="checkbox") {
+        window[varkey] = $(this)[0].checked;
+        if (!isNaN(window[varkey])) window[varkey] *= 1;
+    } else {
+        window[varkey] = $(this).val();
+        if (!isNaN(window[varkey])) window[varkey] *= 1;
+    }
     
     var run_fn = page+"_run";
     if (window[run_fn]!=undefined) window[run_fn]();

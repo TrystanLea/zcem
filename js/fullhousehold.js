@@ -1072,9 +1072,10 @@ function fullhousehold_run()
     
     scaled_electrolysis_capacity = electrolysis_capacity * number_of_households
           
-    scaled_landarea_for_sabatier = landarea_for_sabatier * number_of_households
-    scaled_landarea_for_FT = landarea_for_FT * number_of_households
+    scaled_landarea_for_gas = (landarea_for_sabatier + landarea_for_direct_gas) * number_of_households
+    scaled_landarea_for_liquid = (landarea_for_FT + landarea_for_direct_liquid) * number_of_households
     scaled_landarea_for_solid = landarea_for_solid * number_of_households
+    scaled_biomass_m2 = biomass_m2 * number_of_households
     
     scaled_H2_store_capacity = H2_store_capacity * number_of_households
     scaled_liquid_store_capacity = liquid_store_capacity * number_of_households
@@ -1086,7 +1087,7 @@ function fullhousehold_run()
     scaled_total_electrolysis_demand = (total_electrolysis_demand/10) * number_of_households
     scaled_exess_generation = (exess_generation/10) * number_of_households
     scaled_total_liquid_demand = (total_liquid_demand/10) * number_of_households
-
+    
     
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
