@@ -589,6 +589,53 @@ table td {
 </div>
 
 <div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>INDUSTRY</b></div>
+    <div class="inner">
+
+        <table class="table" style="width:50%; float:left">
+        <tr>
+            <td>Include industrial demand:</td>
+            <td><input class="modelinput" key="industry_enable" type="checkbox" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Industrial electricity demand:</td>
+            <td><input class="modelinput" key="industry_electric_twh" type="text" style="width:100px" autocomplete="off"/> TWh</td>
+        </tr>
+        <tr>
+            <td>Industrial gas demand:</td>
+            <td><input class="modelinput" key="industry_gas_twh" type="text" style="width:100px" autocomplete="off"/> TWh</td>
+        </tr>
+        <tr>
+            <td>Industrial liquid demand:</td>
+            <td><input class="modelinput" key="industry_liquid_twh" type="text" style="width:100px" autocomplete="off"/> TWh</td>
+        </tr>
+        <tr>
+            <td>Industrial solid demand:</td>
+            <td><input class="modelinput" key="industry_solid_twh" type="text" style="width:100px" autocomplete="off"/> TWh</td>
+        </tr>
+        <tr>
+            <td>Industrial hydrogen demand:</td>
+            <td><input class="modelinput" key="industry_hydrogen_twh" type="text" style="width:100px" autocomplete="off"/> TWh</td>
+        </tr>
+        </table>
+        
+        <div style="float:left;">
+            <p><b>Industrial demand per household</b></p>
+            <table>
+            <tr><td>Industrial electricity demand</td><td><span class="modeloutput" key="industry_electric" type="1y"></span></td></tr>
+            <tr><td>Industrial gas demand</td><td><span class="modeloutput" key="industry_gas" type="1y"></span></td></tr>
+            <tr><td>Industrial liquid demand</td><td><span class="modeloutput" key="industry_liquid" type="1y"></span></td></tr>
+            <tr><td>Industrial solid demand</td><td><span class="modeloutput" key="industry_solid" type="1y"></span></td></tr>
+            <tr><td>Industrial hydrogen demand</td><td><span class="modeloutput" key="industry_hydrogen" type="1y"></span></td></tr>
+            </table>
+        </div>
+        <div style="clear:both"></div>
+        
+        <p>Note: With industry included try increasing offshore wind to 4.5 kW per household in the supply section in order to reduce supply of additional energy from biomass.</p><p>Industrial demand figures used here are based on the figures used in the ZeroCarbonBritain scenario and include a shift from gas, liquid and solid fuel demands over to electric where applicable.</p><p> A more advanced model of industrial demand worth developing in future would include an analysis of the main types of goods produced and larger energy consuming processes such as aluminium and steel and concrete production, this could be tied into an analysis of the embodied energy that is required to produce many of the technologies included in this model which cover building construction, household appliances and cars.</p>
+    </div>
+</div>
+
+<div class="box">
     <div class="box-title">
         <img class="icon-expand" src="img/expand.png"><b>FINAL SUPPLY DEMAND MATCHING
         <span style="float:right" class="modeloutput" key="prc_demand_supplied_all" dp=3 scale=1 units="%"></span>
@@ -714,3 +761,23 @@ table td {
         <div style="clear:both"></div>
     </div>
 </div>
+<!--
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>COSTS</b></div>
+    <div class="inner">
+        <table style="width:50%; float:left">
+        <tr><td>Onshore wind</td><td><span class="modeloutput" key="onshorewind_cost" type="1d"></span></td></tr>
+        <tr><td>Offshore wind</td><td><span class="modeloutput" key="offshorewind_cost" type="1d"></span></td></tr>
+        <tr><td>Solar PV</td><td><span class="modeloutput" key="solarpv_cost" type="1d"></span></td></tr>
+        <tr><td>Electrolyser</td><td><span class="modeloutput" key="electrolyser_cost" type="1d"></span></td></tr>
+        <tr><td>Anaerobic Digestion Plant</td><td><span class="modeloutput" key="AD_plant_cost" type="1d"></span></td></tr>
+        <tr><td>Lithium Ion Store</td><td><span class="modeloutput" key="liion_store_cost" type="1d"></span></td></tr>
+        <tr><td>Electric Vehicle</td><td><span class="modeloutput" key="ecar_cost" type="1d"></span></td></tr>
+        </table>
+        <div style="float:left; width:45%">
+        
+        </div>
+        <div style="clear:both"></div>
+    </div>
+</div>
+-->

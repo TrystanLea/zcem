@@ -154,10 +154,12 @@ function fullhousehold_init()
     ebike_miles_per_kwh = 66
     
     // Industry
-    industry_electric_twh = 0//171 // TWh
-    industry_gas_twh = 0//61       // TWh
-    industry_liquid_twh = 0//12    // TWh
-    industry_solid_twh = 0//26     // TWh
+    industry_enable = 0
+    
+    industry_electric_twh = 171 // TWh
+    industry_gas_twh = 61       // TWh
+    industry_liquid_twh = 12    // TWh
+    industry_solid_twh = 26     // TWh
     industry_hydrogen_twh = 0   // TWh
     
     // number of buildings
@@ -281,15 +283,20 @@ function fullhousehold_run()
     
     // Industry
     twh = 1000000000 // twh to kwh
+    nhouseholds = 26000000
     
-    industry_electric = (industry_electric_twh * twh) / number_of_households
-    industry_gas = (industry_gas_twh * twh) / number_of_households
-    industry_liquid = (industry_liquid_twh * twh) / number_of_households
-    industry_solid = (industry_solid_twh * twh) / number_of_households
-    industry_hydrogen = (industry_hydrogen_twh * twh) / number_of_households
-    
-    total_industry_electric = 0
+    industry_electric = (industry_electric_twh * twh) / nhouseholds
+    industry_gas = (industry_gas_twh * twh) / nhouseholds
+    industry_liquid = (industry_liquid_twh * twh) / nhouseholds
+    industry_solid = (industry_solid_twh * twh) / nhouseholds
+    industry_hydrogen = (industry_hydrogen_twh * twh) / nhouseholds
 
+    total_industry_electric = 0
+    total_industry_gas = 0
+    total_industry_liquid = 0
+    total_industry_solid = 0
+    total_industry_hydrogen = 0
+    
     data = {
         supply:[],
         LAC:[],
@@ -398,10 +405,12 @@ function fullhousehold_run()
         // ---------------------------------------------------------------------------
         // Industrial electric demand
         // ---------------------------------------------------------------------------
-        hourly_industry_electric = industry_electric / (365*24)
-        demand += hourly_industry_electric
-        balance -= hourly_industry_electric
-        total_industry_electric += hourly_industry_electric
+        if (industry_enable) {
+            hourly_industry_electric = industry_electric / (365*24)
+            demand += hourly_industry_electric
+            balance -= hourly_industry_electric
+            total_industry_electric += hourly_industry_electric
+        }
         // ---------------------------------------------------------------------------
         // Traditional electricity demand
         // ---------------------------------------------------------------------------
@@ -831,8 +840,13 @@ function fullhousehold_run()
         hourly_aviation_demand = (aviation_miles / aviation_miles_per_kwh) / (365.0 * 24.0)
         total_aviation_demand += hourly_aviation_demand
         
+        // Industrial liquid fuel demand
+        hourly_industry_liquid = 0
+        if (industry_enable) hourly_industry_liquid = industry_liquid / (365*24)
+        total_industry_liquid += hourly_industry_liquid
+        
         // Liquid store
-        liquid_demand = hourly_aviation_demand + synthfuel_for_heat + IC_liquid_demand
+        liquid_demand = hourly_aviation_demand + synthfuel_for_heat + IC_liquid_demand + hourly_industry_liquid
         total_liquid_demand += liquid_demand
         
         if ((liquid_store_level-liquid_demand)<0) {
@@ -887,8 +901,14 @@ function fullhousehold_run()
 
         // ---------------------------------------------------------------------------
         // Methane store demand
-        // ---------------------------------------------------------------------------  
-        methane_demand = CCGT_methane + methane_for_heat
+        // --------------------------------------------------------------------------- 
+        
+        // Industrial methane demand for high temperature processes 
+        hourly_industry_gas = 0
+        if (industry_enable) hourly_industry_gas = industry_gas / (365*24)
+        total_industry_gas += hourly_industry_gas
+        
+        methane_demand = CCGT_methane + methane_for_heat + hourly_industry_gas
         total_methane_demand += methane_demand
         
         if ((methane_store_level-methane_demand)>=0) {
@@ -897,6 +917,11 @@ function fullhousehold_run()
             unmet_methane_demand += (methane_demand - methane_store_level)
             methane_store_level = 0
         }
+        
+        // Industry solid demand
+        hourly_industry_solid = 0
+        if (industry_enable) hourly_industry_solid = industry_solid / (365*24)
+        total_industry_solid += hourly_industry_solid
         
         // ---------------------------------------------------------------------------
         // Final balance
@@ -997,11 +1022,11 @@ function fullhousehold_run()
     // Solid: wood chips, pellets & logs
     // 0.975 based on 100% SRC with 50% increase in yields
     biomass_landarea_factor = ((1.0/3650)/0.024) / 0.975;
-    landarea_for_solid = total_biomassboiler_biomass_demand * biomass_landarea_factor
+    landarea_for_solid = (total_biomassboiler_biomass_demand + total_industry_solid) * biomass_landarea_factor
     prc_landarea_for_solid = 100 * landarea_for_solid / landarea_per_household
     
     // Total biomass land area required
-    biomass_requirement = total_biomass_for_FT + total_biomass_for_sabatier + total_biomassboiler_biomass_demand + total_biomass_for_direct_gas + total_biomass_for_direct_liquid
+    biomass_requirement = total_biomass_for_FT + total_biomass_for_sabatier + total_biomassboiler_biomass_demand + total_biomass_for_direct_gas + total_biomass_for_direct_liquid + total_industry_solid
     biomass_m2 = landarea_for_FT + landarea_for_sabatier + landarea_for_solid + landarea_for_direct_gas + landarea_for_direct_liquid
     prc_landarea_for_biomass = 100 * biomass_m2 / landarea_per_household
     
@@ -1017,6 +1042,7 @@ function fullhousehold_run()
     
     total_demand = total_elec_demand + total_aviation_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand
     total_demand += total_gasboiler_gas_demand + total_biomassboiler_biomass_demand + total_synthfuelboiler_fuel_demand
+    total_demand += total_industry_gas + total_industry_liquid + total_industry_solid + total_industry_hydrogen 
     
     primary_energy_factor = total_supply / total_demand
                                                                                                           // introducing these adds an error in the final balance
@@ -1109,6 +1135,16 @@ function fullhousehold_run()
                 units = " kWh/y"
                 dp = 0
             }
+        } else if(type=="1y") {
+            if (unitsmode=="kwhd") {
+                scale = 1.0 / 365
+                units = " kWh/d"
+                dp = 1
+            } else if (unitsmode=="kwhy") {
+                scale = 1.0
+                units = " kWh/y"
+                dp = 0
+            }
         } else if(type=="1d") {
             if (unitsmode=="kwhd") {
                 scale = 1.0
@@ -1195,7 +1231,12 @@ function fullhousehold_run()
           {"kwhd":total_IC_liquid_demand/3650,"name":"IC Cars","color":0},
           {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
           {"kwhd":total_ebike_demand/3650,"name":"E-Bikes","color":0},
-          {"kwhd":total_industry_electric/3650,"name":"Industry","color":0},
+          // Industry
+          {"kwhd":total_industry_electric/3650,"name":"Industry Electric","color":0},
+          {"kwhd":total_industry_gas/3650,"name":"Industry Gas","color":0},
+          {"kwhd":total_industry_liquid/3650,"name":"Industry Liquid","color":0},
+          {"kwhd":total_industry_solid/3650,"name":"Industry Biomass","color":0},
+          // Backup, liquid and gas processes
           {"kwhd":total_electrolysis_losses/3650,"name":"H2 losses","color":2},
           {"kwhd":total_CCGT_losses/3650,"name":"CCGT losses","color":2},
           {"kwhd":total_FT_losses/3650,"name":"FT losses","color":2},
