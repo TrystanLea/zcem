@@ -29,9 +29,9 @@ function fullhousehold_init()
     // ---------------------------------------------------------------------------
     // dataset index:
     // 0:onshore wind, 1:offshore wind, 2:wave, 3:tidal, 4:solar, 5:traditional electricity
-    onshorewind_capacity = 1.87
+    onshorewind_capacity = 1.92
     offshorewind_capacity = 0.0
-    solarpv_capacity = 1.87
+    solarpv_capacity = 1.92
     hydro_capacity = 0.0
     wave_capacity = 0.0
     tidal_capacity = 0.0
@@ -86,7 +86,7 @@ function fullhousehold_init()
     night_time_setback = 16.0
     heatpump_COP = 3.0
 
-    heatstore_capacity = 10
+    heatstore_capacity = 0.0
     heatstore = heatstore_capacity * 0.5
     
     gasboiler_efficiency = 0.92
@@ -125,7 +125,7 @@ function fullhousehold_init()
     charge_type = "smartcharge"
 
     // ---------------------------------------------------------------------------
-    liion_capacity = 0
+    liion_capacity = 7
     liion_SOC_start = liion_capacity * 0.5
     // ---------------------------------------------------------------------------
     electrolysis_capacity = 1.35
@@ -137,14 +137,14 @@ function fullhousehold_init()
     FT_fraction = 1.0
     liquid_store_capacity = 300.0
     liquid_store_start = liquid_store_capacity * 0.5
-    supply_unmet_liquid_from_direct_biomass = 1
+    supply_unmet_liquid_from_direct_biomass = 0
     
     sabatier_fraction = 1.0
-    methane_store_capacity = 2500.0
+    methane_store_capacity = 5000.0
     methane_store_start = methane_store_capacity * 0.5
-    supply_unmet_gas_from_direct_biomass = 1
+    supply_unmet_gas_from_direct_biomass = 0
     
-    CCGT_capacity = 1.5
+    CCGT_capacity = 1.6
     
     // Aviation
     aviation_miles_per_kwh = 1.3  // passenger miles per kwh based on 50 kWh per 100p/km
@@ -265,6 +265,8 @@ function fullhousehold_run()
     total_unmet_before_CCGT = 0
     total_CCGT_losses = 0
     max_CCGT_output = 0
+    CCGT_output_filter = 0
+    CCGT_output = 0
     
     // Stores
     H2_store_level = H2_store_start * 1
@@ -297,6 +299,10 @@ function fullhousehold_run()
     total_industry_solid = 0
     total_industry_hydrogen = 0
     
+    unmet_array = [];
+    for (var i=0; i<24; i++) unmet_array[i] = 0;
+    unmet_sum = 0
+    
     data = {
         supply:[],
         LAC:[],
@@ -307,7 +313,11 @@ function fullhousehold_run()
         liion_store_level: [],
         H2_store_level:[],
         liquid_store_level:[],
-        methane_store_level:[]
+        methane_store_level:[],
+        CCGT_output:[],
+        CCGT_output_peaker:[],
+        unmet_before_CCGT:[],
+        liion_discharge:[]
     }
     // ---------------------------------------------------------------------------------------------  
     // Building energy model
@@ -700,8 +710,9 @@ function fullhousehold_run()
             liion_SOC += liion_charge_s2
             balance -= liion_charge
             total_liion_charge += liion_charge
-            
-        } else {
+        }
+        /*
+        if (balance<-1.0) {
             liion_discharge = -balance
             liion_discharge_s2 = liion_discharge / 0.92
             if ((liion_SOC-liion_discharge_s2)<0) {
@@ -711,7 +722,7 @@ function fullhousehold_run()
             liion_SOC -= liion_discharge_s2
             balance += liion_discharge
             total_liion_discharge += liion_discharge
-        }
+        }*/
         
         // ---------------------------------------------------------------------------
         // Hydrogen production
@@ -881,24 +892,133 @@ function fullhousehold_run()
         // Backup electricity is provided here by conventional gas turbines CCGT
         // running on synthetic methane or/and biogas. 
         // CCGT efficiency is assumed to be 50%
-        CCGT_methane = 0.0
+        unmet_before_CCGT = 0
         
         if (balance<0.0) {
+            unmet_before_CCGT = -balance
             total_unmet_before_CCGT += -balance
-            CCGT_output = -balance
-            CCGT_output = CCGT_output / (1.0-grid_loss_prc)
-            if (CCGT_output>CCGT_capacity) CCGT_output = CCGT_capacity
-            CCGT_methane = CCGT_output / 0.5
-            
-            balance += CCGT_output
-            
-            if (CCGT_output>max_CCGT_output) max_CCGT_output = CCGT_output;
-            
-            total_grid_losses += CCGT_output * grid_loss_prc
-            total_CCGT_output += CCGT_output
-            total_CCGT_losses += CCGT_output
         }
+        
+        // ---------------------------------------------------------------------------
+        // 1) Calculate average backup demand in the last 24 hours
+        //    run CCGT at this average amount providing positive balance at off peak times 
+        //    to charge lithium ion short term stores and providing baseload at peak times
+        //    so that lithium ion discharce only covers the peak rather than the baseload
+        // ---------------------------------------------------------------------------
+        
+        average_hours = 24
+        
+        unmet = 0
+        if (balance<0.0) unmet = balance * -1
+        
+        // Shift on one
+        for (var i=(average_hours-1); i>0; i--) unmet_array[i] = unmet_array[i-1]
+        unmet_array[i] = unmet
+        
+        // Calculate average
+        unmet_sum = 0
+        for (var i=0; i<average_hours; i++) unmet_sum += unmet_array[i]
+        unmet_average = unmet_sum / average_hours
+        
+        if (liion_SOC<(liion_capacity*0.3)) unmet_average *= 1.1
+        
+        // ---------------------------------------------------------------------------
+        // 2) Set CCGT turbines to average demand in last 24 hours
+        // ---------------------------------------------------------------------------
+        CCGT_methane = 0.0
+        last_CCGT_output = CCGT_output
+        CCGT_output = 0
+        
+        CCGT_output = unmet_average
+        CCGT_output = CCGT_output / (1.0-grid_loss_prc)
+        if (CCGT_output>CCGT_capacity) CCGT_output = CCGT_capacity
+        CCGT_output = CCGT_output * (1.0-grid_loss_prc)
+        balance += CCGT_output
+        
+        /*
+        change_in_CCGT_output = CCGT_output-last_CCGT_output
+        max_ramp_rate = 0.01
+        // Maximum ramp up rate
+        if (change_in_CCGT_output>(max_ramp_rate*CCGT_capacity)) change_in_CCGT_output = (max_ramp_rate*CCGT_capacity)
+        // Maximum ramp down rate
+        if (change_in_CCGT_output<(-1*max_ramp_rate*CCGT_capacity)) change_in_CCGT_output = (-1*max_ramp_rate*CCGT_capacity)
+        // Limited ramp up/down output
+        CCGT_output = last_CCGT_output + change_in_CCGT_output
+        */
+        
+            
+        // ---------------------------------------------------------------------------
+        // 3) Recharge short term battery storage from CCGT
+        // ---------------------------------------------------------------------------
+        liion_charge = 0
+        
+        if (balance>0.0) {
+            liion_charge = balance
+            
+            liion_charge_s2 = liion_charge * 0.92 // charge loss
+            if ((liion_SOC+liion_charge_s2)>liion_capacity) {
+                liion_charge_s2 = liion_capacity - liion_SOC;
+            }
+            liion_charge = liion_charge_s2 / 0.92
+            
+            liion_SOC += liion_charge_s2
+            total_liion_charge += liion_charge
+            balance -= liion_charge
+        }
+        
+        // If CCGT output unused by lithium ion charge dont generate
+        if (balance>0.0 && CCGT_output>0) {
+            pre_CCGT_output = CCGT_output
+            CCGT_output -= balance
+            if (CCGT_output<0) CCGT_output =0
+            unused_CCGT_output = pre_CCGT_output - CCGT_output
+            balance -= unused_CCGT_output
+            
+        }
+        
+        CCGT_methane = CCGT_output / 0.5
+        total_CCGT_output += CCGT_output
+        total_CCGT_losses += CCGT_output
+        total_grid_losses += CCGT_output * grid_loss_prc
+        
+        if (CCGT_output>max_CCGT_output) max_CCGT_output = CCGT_output
+        CCGT_output_filter = CCGT_output_filter + 0.1 * (CCGT_output - CCGT_output_filter)
 
+        // ---------------------------------------------------------------------------
+        // 4) Peak reduction with lithium ion batteries
+        // --------------------------------------------------------------------------- 
+        if (balance<0.0) {
+            liion_discharge = -balance
+            liion_discharge_s2 = liion_discharge / 0.92
+            if ((liion_SOC-liion_discharge_s2)<0) {
+                liion_discharge_s2 = liion_SOC;
+            }
+            liion_discharge = liion_discharge_s2 * 0.92
+            liion_SOC -= liion_discharge_s2
+            balance += liion_discharge
+            total_liion_discharge += liion_discharge
+        }
+        
+        // ---------------------------------------------------------------------------
+        // 5) If balance is still negative use CCGT for final peaker backup
+        // --------------------------------------------------------------------------- 
+        CCGT_output_peaker = 0
+        if (balance<0.0) {
+            CCGT_output_peaker = -1 * balance
+            CCGT_output_peaker = CCGT_output_peaker / (1.0-grid_loss_prc)
+            if ((CCGT_output_peaker+CCGT_output)>CCGT_capacity) CCGT_output_peaker = CCGT_capacity - CCGT_output
+            CCGT_output_peaker = CCGT_output_peaker * (1.0-grid_loss_prc)
+            balance += CCGT_output_peaker
+            
+            CCGT_methane += CCGT_output_peaker / 0.5
+            total_CCGT_output += CCGT_output_peaker
+            total_CCGT_losses += CCGT_output_peaker
+            total_grid_losses += CCGT_output_peaker * grid_loss_prc 
+        }
+        
+        if ((CCGT_output+CCGT_output_peaker)>max_CCGT_output) max_CCGT_output = CCGT_output + CCGT_output_peaker
+        
+        
         // ---------------------------------------------------------------------------
         // Methane store demand
         // --------------------------------------------------------------------------- 
@@ -929,6 +1049,7 @@ function fullhousehold_run()
         total_elec_demand += demand
         
         exess = 0
+        
         if (balance>=0) {
             exess = balance
             exess_generation += balance
@@ -950,6 +1071,12 @@ function fullhousehold_run()
         data.H2_store_level.push([time,liion_SOC+H2_store_level]);
         data.liquid_store_level.push([time,liion_SOC+H2_store_level+liquid_store_level]);
         data.methane_store_level.push([time,liion_SOC+H2_store_level+liquid_store_level+methane_store_level]);
+        
+        data.unmet_before_CCGT.push([time,unmet_before_CCGT])
+
+        data.CCGT_output.push([time,CCGT_output]);
+        data.CCGT_output_peaker.push([time,CCGT_output+CCGT_output_peaker]);
+        data.liion_discharge.push([time,CCGT_output+CCGT_output_peaker+liion_discharge])
     }
     // ---------------------------------------------------------------------------
     // Less efficient provision of any unmet biogas and biofuels from biomass
@@ -1277,7 +1404,7 @@ function fullhousehold_view(start,end,interval)
             {label: "Heatpump Heatstore", data:dataout.HPS, yaxis:1, color:"#cc3311", lines: {lineWidth:0, fill: 1.0 }},
             {label: "Heatpumps", data:dataout.HP, yaxis:1, color:"#cc6622", lines: {lineWidth:0, fill: 1.0 }},
             {label: "LAC", data:dataout.LAC, yaxis:1, color:"#0066cc", lines: {lineWidth:0, fill: 1.0 }},
-            {label: "Supply", data:dataout.supply, yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
+            {label: "Supply", data:dataout.supply, yaxis:1, color:"#000000", lines: {lineWidth:0.2, fill: false }},
 
             ], {
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
@@ -1296,6 +1423,27 @@ function fullhousehold_view(start,end,interval)
             {label: "Liquid Store", data:dataout.liquid_store_level, yaxis:3, color:"#8533e1", lines: {lineWidth:0, fill: 1.0 }},
             {label: "Hydrogen Store", data:dataout.H2_store_level, yaxis:3, color:"#97b5e7", lines: {lineWidth:0, fill: 1.0 }},
             {label: "Lithium Ion Store", data:dataout.liion_store_level, yaxis:3, color:"#1960d5", lines: {lineWidth:0, fill: 1.0 }}
+
+            ], {
+                xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
+                yaxes: [{},{min: 0, max: 100},{}],
+                grid: {hoverable: true, clickable: true},
+                selection: { mode: "x" },
+                legend: {position: "nw"}
+            }
+        );
+    }
+    
+    if (view_mode=="backup")
+    {
+        $.plot("#placeholder", [
+            {label: "Lithium ion discharge", data:dataout.liion_discharge, yaxis:1, color:"#0000ff", lines: {lineWidth:0, fill: 0.5 }},
+            {label: "CCGT output peaker", data:dataout.CCGT_output_peaker, yaxis:1, color:"#ddbb00", lines: {lineWidth:0, fill: 1.0 }},
+            {label: "CCGT output", data:dataout.CCGT_output, yaxis:1, color:"#ccaa00", lines: {lineWidth:0, fill: 1.0 }},
+            // {label: "CCGT output filter", data:dataout.CCGT_output_filter, yaxis:1, color:"#ff0000", lines: {lineWidth:1, fill:false }},
+            {label: "Lithium Ion Store", data:dataout.liion_store_level, yaxis:2, color:"#1960d5", lines: {lineWidth:1, fill: false }},
+            {label: "Unmet before CCGT", data:dataout.unmet_before_CCGT, yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
+            // {label: "Unmet sum", data:dataout.unmet_sum, yaxis:1, color:"#0000ff", lines: {lineWidth:1, fill: false }}
 
             ], {
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
