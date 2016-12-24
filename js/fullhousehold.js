@@ -86,7 +86,7 @@ function fullhousehold_init()
     night_time_setback = 16.0
     heatpump_COP = 3.0
 
-    heatstore_capacity = 0.0
+    heatstore_capacity = 10.0
     heatstore = heatstore_capacity * 0.5
     
     gasboiler_efficiency = 0.92
@@ -236,6 +236,7 @@ function fullhousehold_run()
     total_liion_charge = 0
     total_liion_discharge = 0
     liion_SOC = liion_SOC_start
+    total_liion_losses = 0
     
     // Electrolysis -----------------------------------------
     total_electrolysis_demand = 0
@@ -710,6 +711,8 @@ function fullhousehold_run()
             liion_SOC += liion_charge_s2
             balance -= liion_charge
             total_liion_charge += liion_charge
+            
+            total_liion_losses += liion_charge * 0.08
         }
         /*
         if (balance<-1.0) {
@@ -964,6 +967,8 @@ function fullhousehold_run()
             liion_SOC += liion_charge_s2
             total_liion_charge += liion_charge
             balance -= liion_charge
+            
+            total_liion_losses += liion_charge * 0.08
         }
         
         // If CCGT output unused by lithium ion charge dont generate
@@ -997,6 +1002,8 @@ function fullhousehold_run()
             liion_SOC -= liion_discharge_s2
             balance += liion_discharge
             total_liion_discharge += liion_discharge
+            
+            total_liion_losses += liion_discharge * 0.08
         }
         
         // ---------------------------------------------------------------------------
@@ -1176,7 +1183,7 @@ function fullhousehold_run()
     final_store_levels = liion_SOC + H2_store_level + liquid_store_level + methane_store_level            // + EV_SOC
     starting_store_levels = (1*liion_SOC_start) + (1*H2_store_start) + (1*methane_store_start) + (1*liquid_store_start)   // + EV_SOC_start
     total_exess = exess_generation + final_store_levels - starting_store_levels
-    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses + total_direct_gas_losses + total_direct_liquid_losses
+    total_losses = total_electrolysis_losses + total_CCGT_losses + total_FT_losses + total_sabatier_losses + total_grid_losses + total_direct_gas_losses + total_direct_liquid_losses + total_liion_losses
     total_unmet_demand = unmet_elec_demand + unmet_methane_demand + unmet_liquid_demand + unmet_demand_atuse
 
     prc_demand_supplied_all = (((total_demand+total_losses) - total_unmet_demand) / (total_demand+total_losses)) * 100
@@ -1371,6 +1378,7 @@ function fullhousehold_run()
           {"kwhd":total_direct_gas_losses/3650,"name":"Direct gas loss","color":2},
           {"kwhd":total_direct_liquid_losses/3650,"name":"Direct liquid loss","color":2},
           {"kwhd":total_grid_losses/3650,"name":"Grid losses","color":2},
+          {"kwhd":total_liion_losses/3650,"name":"Liion losses","color":2},
           {"kwhd":total_exess/3650,"name":"Exess","color":3}
         ]
       }
