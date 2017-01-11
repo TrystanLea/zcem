@@ -69,6 +69,7 @@ if (page=="") page = "introduction";
 
 $(document).ready(function() {
     $("#rightpanel-inner").html(view_desc[page]);
+    $("#rightpanel-inner").css("padding","20px");
 });
 
 $(window).on('hashchange', function() {
@@ -104,6 +105,7 @@ function load_page(page)
         
         $("#model").html(view_html[page]);
         $("#rightpanel-inner").html(view_desc[page]);
+        $("#rightpanel-inner").css("padding","20px");
         
         // Load js
         $.ajax({
