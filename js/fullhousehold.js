@@ -13,6 +13,7 @@
 10. Synthetic fuel production: liquid and gas & stores
 11. Industrial demand
 12. Aviation demand
+    Train demand
 13. Gas turbines for backup
 
 - electric trains
@@ -150,6 +151,9 @@ function fullhousehold_init()
     aviation_miles_per_kwh = 1.3  // passenger miles per kwh based on 50 kWh per 100p/km
     aviation_miles = 1200
     
+    train_miles = 1200
+    train_miles_per_kwh = 12.5
+    
     ebike_annual_miles = 2000
     ebike_miles_per_kwh = 66
     
@@ -283,6 +287,8 @@ function fullhousehold_run()
     unmet_aviation_demand = 0
     unmet_liquid_demand = 0
     total_aviation_demand = 0
+    
+    total_train_demand = 0
     
     // Industry
     twh = 1000000000 // twh to kwh
@@ -562,6 +568,14 @@ function fullhousehold_run()
         balance -= ebike_hourly_demand
         demand += ebike_hourly_demand
         total_ebike_demand += ebike_hourly_demand
+
+        // ---------------------------------------------------------------------------
+        // Train demand distributed eavenly across the year
+        // ---------------------------------------------------------------------------
+        hourly_train_demand = (train_miles / train_miles_per_kwh) / (365.0 * 24.0)
+        balance -= hourly_train_demand
+        demand += hourly_train_demand
+        total_train_demand += hourly_train_demand
         
         // ---------------------------------------------------------------------------
         // Electric vehicles
@@ -1165,7 +1179,7 @@ function fullhousehold_run()
     prc_landarea_for_biomass = 100 * biomass_m2 / landarea_per_household
     
     // Overall transport
-    total_transport_demand = total_EV_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand + total_aviation_demand + total_ebike_demand
+    total_transport_demand = total_EV_demand + total_H2EV_hydrogen_demand + total_IC_liquid_demand + total_aviation_demand + total_ebike_demand + total_train_demand
     
     // Elec supply / demand matching
     prc_elec_demand_supplied = ((total_elec_demand - unmet_elec_demand) / total_elec_demand) * 100
@@ -1364,6 +1378,7 @@ function fullhousehold_run()
           {"kwhd":total_H2EV_hydrogen_demand/3650,"name":"Hydrogen Cars","color":0},
           {"kwhd":total_IC_liquid_demand/3650,"name":"IC Cars","color":0},
           {"kwhd":total_aviation_demand/3650,"name":"Aviation","color":0},
+          {"kwhd":total_train_demand/3650,"name":"E-Trains","color":0},
           {"kwhd":total_ebike_demand/3650,"name":"E-Bikes","color":0},
           // Industry
           {"kwhd":total_industry_electric/3650,"name":"Industry Electric","color":0},

@@ -407,9 +407,18 @@ table td {
             <tr>
                 <td>Air miles</td>
                 <td><input class="modelinput" key="aviation_miles" type="text" style="width:60px" value="" autocomplete="off"/></td>
-                <td><i style="font-size:14px">Based on energy performance of 1.3 miles/kWh liquid fuel</i></td>
+                <td>Performance (miles/kwh):</td>
+                <td><input class="modelinput" key="aviation_miles_per_kwh" type="text" style="width:60px" value="" autocomplete="off"/></td>
+            </tr>
+            <tr>
+                <td>Electric train miles</td>
+                <td><input class="modelinput" key="train_miles" type="text" style="width:60px" value="" autocomplete="off"/></td>
+                <td>Performance (miles/kwh):</td>
+                <td><input class="modelinput" key="train_miles_per_kwh" type="text" style="width:60px" value="" autocomplete="off"/></td>
             </tr>
         </table>
+        
+
         
         <div style="float:left; margin-left:20px">
             <table>
@@ -425,6 +434,8 @@ table td {
             </table>
         </div>
         <div style="clear:both"></div>
+        <br>
+        <i style="font-size:14px">Train energy consumption possible range: 7 miles/kWh all the way up to 40 miles/kWh per person. <a href="http://withouthotair.com/c20/page_119.shtml">[withouthotair]</a></i>
     </div>
 </div>
 <div class="box">
