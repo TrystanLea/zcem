@@ -34,13 +34,15 @@ function fullzcb_init()
     geothermal_heat_cf = 0.9
     
     // Traditional electricity demand
-    change_traditional_demand = 1.0 - 0.74823
+    prc_reduction_traditional_demand = 100*0.74823
+    change_traditional_demand = 1.0 - (prc_reduction_traditional_demand/100)
     
     // Space & water heating demand
     specific_space_heat_demand = 4.398 // GW/K
     space_heat_base_temperature = 16.0-(385.0/119.0) // 12.8 K
-    water_heating = 95.84*1000.0;         // GWh
-    water_heating_daily_demand = water_heating / 365.25
+    
+    water_heating = 95.84;         // GWh
+    water_heating_daily_demand = water_heating * 1000.0 / 365.25
     
     heatpump_COP = 3.0
     elres_efficiency = 1.0;
@@ -771,7 +773,11 @@ function fullzcb_run()
                 if (window[key]>=10000*10*1000) {scale=0.0001*0.001; units=" kha"; dp=0;}
                 if (window[key]>=10000*10*1000*1000) {scale=0.0001*0.001*0.001; units=" Mha"; dp=0;}
             } 
-        }
+        } else if(type=="%") {
+            scale = 100.0
+            units = "%"
+            dp = 0
+        } 
         
         $(this).html("<span>"+(1*window[key]*scale).toFixed(dp)+"</span><span style='font-size:90%'>"+units+"</span>");
     });

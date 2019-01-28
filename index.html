@@ -138,7 +138,11 @@ function load_page(page)
     
     $(".modelinput").each(function(){
         var varkey = $(this).attr("key");
-        $(this).val(window[varkey]);
+        var type = $(this).attr("itype");
+        var scale = 1.0;
+        if (type=="%") scale = 100.0;
+        
+        $(this).val(window[varkey]*scale);
         console.log(varkey);
     });
     
@@ -151,7 +155,11 @@ function load_page(page)
 
 $("#model").on("change",".modelinput",function(){
     var varkey = $(this).attr("key");
-    window[varkey] = $(this).val();
+    var type = $(this).attr("itype");
+    var scale = 1.0;
+    if (type=="%") scale = 100.0;
+    
+    window[varkey] = $(this).val() / scale;
     var run_fn = page+"_run";
     if (window[run_fn]!=undefined) window[run_fn]();
     var view_fn = page+"_view";

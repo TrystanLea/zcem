@@ -423,9 +423,113 @@ table td {
         </tr>
         <tr>
             <td>Total bioliquid demand</td>
-            <td><span class="modeloutput" key="transport_bioliquid_demand" type="10y"></span></td>
+            <td><span class="modeloutput" key="transport_bioliquid_demand" dp=1></span> TWh/yr</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Total useable EV battery capacity</td>
+            <td><input class="modelinput" key="electric_car_battery_capacity" type="text" style="width:70px" value="" autocomplete="off"/></span> GWh</td>
+        </tr>
+        <tr>
+            <td>Maximum rate of charge</td>
+            <td><input class="modelinput" key="electric_car_max_charge_rate" type="text" style="width:70px" value="" autocomplete="off"/></span> GWh</td>
+        </tr>
+        <tr>
+            <td>Enable smart charging?</td>
+            <td><input class="modelinput" key="smart_charging_enabled" type="text" style="width:70px" value="" autocomplete="off"/></span></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FT process: biomass required</td>
+            <td><input class="modelinput" key="FT_process_biomass_req" type="text" style="width:70px" value="" autocomplete="off"/></span> GWh/GWh fuel</td>
+        </tr>
+        <tr>
+            <td>FT process: hydrogen required</td>
+            <td><input class="modelinput" key="FT_process_hydrogen_req" type="text" style="width:70px" value="" autocomplete="off"/></span> GWh/GWh fuel</td>
         </tr>
         </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>ELECTRICITY DEMAND</b></div>
+    <div class="inner">
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Change in "traditional" electricity</td>
+            <td>-<input class="modelinput" key="prc_reduction_traditional_demand" type="text" style="width:70px" value="" autocomplete="off" dp=0 /></span>%</td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SPACE / WATER HEAT DEMAND</b></div>
+    <div class="inner">
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Specific space heat demand</td>
+            <td><input class="modelinput" key="specific_space_heat_demand" type="text" style="width:70px" value="" autocomplete="off" /></span> GW/K</td>
+        </tr>
+        <tr>
+            <td>Space heat base temperature</td>
+            <td><input class="modelinput" key="space_heat_base_temperature" type="text" style="width:70px" value="" autocomplete="off" /></span> K</td>
+        </tr>
+        <tr>
+            <td>Water heating</td>
+            <td><input class="modelinput" key="water_heating" type="text" style="width:70px" value="" autocomplete="off" /></span> TWh</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </tr>      
+        <tr>
+            <th></th>
+            <th>Heatpumps</th>
+            <th>Elec. resist.</th>
+            <th>Biomass boiler</th>
+        </tr>
+        <tr>
+            <td>Space & water heating share (%)</td>
+            <td><input class="modelinput" key="spacewater_share_heatpumps" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></span></td>
+            <td><input class="modelinput" key="spacewater_share_elres" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></span></td>
+            <td><input class="modelinput" key="spacewater_share_biomass" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></span></td>
+        </tr>
+        <tr>
+            <td>Efficiency (%)</td>
+            <td><input class="modelinput" key="heatpump_COP" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></span></td>
+            <td><input class="modelinput" key="elres_efficiency" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></span></td>
+            <td><input class="modelinput" key="biomass_efficiency" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></span></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Heat store storage capacity</td>
+            <td><input class="modelinput" key="heatstore_storage_cap" type="text" style="width:70px" value="" autocomplete="off" /></span> GWh therm</td>
+        </tr>
+        <tr>
+            <td>Heat store charging capacity</td>
+            <td><input class="modelinput" key="heatstore_charge_cap" type="text" style="width:70px" value="" autocomplete="off" /></span> GW therm</td>
+        </tr>
+        <tr>
+            <td>Heat storage enabled?</td>
+            <td><input class="modelinput" key="heatstore_enabled" type="text" style="width:70px" value="" autocomplete="off" /></span></td>
+        </tr>
+        </table>
+        
     </div>
 </div>
 
