@@ -34,7 +34,10 @@
             <div style="clear:both"></div>
         </div>
 
+        
         <div id="model-bound">
+        
+            <h2>Loading: <span id="loading_prc">0</span></h2>
             <div id="model">
             </div>
             
@@ -53,9 +56,12 @@
 <script language="javascript" type="text/javascript" src="vishelper.js"></script>
 
 <script>
+loading_prc("0","")
 var timerStart = Date.now();
 var view_html = {};
 var view_desc = {};
+
+view_mode = "";
 
 var datastarttime = 32*365.25*24*3600*1000;
 start = datastarttime;
@@ -68,11 +74,20 @@ var pageload = 0;
 load_capacityfactor_dataset(function(){
     console.log("capacityfactor dataset loaded");
     datasets ++;
+    loading_prc(datasets*10,"capacityfactor dataset");
 });
+
 
 load_temperature_dataset(function(){
     console.log("temperature dataset loaded");
     datasets ++;
+    loading_prc(datasets*10,"temperature dataset");
+});
+
+load_test_dataset(function(){
+    console.log("test dataset loaded");
+    datasets ++;
+    loading_prc(datasets*10,"test dataset");
 });
 
 page = (window.location.hash).substring(1);
@@ -126,6 +141,9 @@ function load_page(page)
     
     $("#sourcecode").hide();
     $("#view-source").html("Show source code");
+    
+    var time_elapsed = (Date.now() - timerStart)
+    loading_prc(100,"complete "+(time_elapsed*0.001).toFixed(1)+"s");
 }
 
 $("#model").on("change",".modelinput",function(){
@@ -133,6 +151,14 @@ $("#model").on("change",".modelinput",function(){
     window[varkey] = $(this).val();
     var run_fn = page+"_run";
     if (window[run_fn]!=undefined) window[run_fn]();
+    var view_fn = page+"_view";
+    if (window[view_fn]!=undefined) window[view_fn](start,end,interval);
+});
+
+$("#model").on("click",".viewmode",function(){
+    
+    view_mode = $(this).attr("view");
+    
     var view_fn = page+"_view";
     if (window[view_fn]!=undefined) window[view_fn](start,end,interval);
 });
@@ -154,6 +180,15 @@ $("#model").on("click",".view-source",function(){
         $(".view-source").html("Show source code");
     }
 });
+
+$("#model").on("click",".box-title",function(){
+   var box = $(this).parent().find(".inner");
+   if (box.is(":visible")) box.hide(); else box.show();
+});
+
+function loading_prc(prc,msg) {
+    $("#loading_prc").html(prc+"% "+msg);
+}
     
 </script>
 

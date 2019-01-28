@@ -3,15 +3,15 @@ function load_capacityfactor_dataset(callback){
     tenyearsdatalines = []
     hours = 0
     
-    JSZipUtils.getBinaryContent('tenyearsdata.csv.zip', function(err, data) {
+    JSZipUtils.getBinaryContent('highresolution.csv.zip', function(err, data) {
         if(err) {
         throw err; // or handle err
         }
 
         var zip = new JSZip(data);
-        capacityfactorfile = zip.file("tenyearsdata.csv").asText();
+        capacityfactorfile = zip.file("highresolution.csv").asText();
         tenyearsdatalines = capacityfactorfile.split(/\r\n|\n/);
-        hours = tenyearsdatalines.length;
+        hours = 87648;
         callback();
     });
 }
@@ -30,6 +30,22 @@ function load_temperature_dataset(callback){
         temperaturefile = zip.file("temperature.csv").asText();
         temperaturelines = temperaturefile.split(/\r\n|\n/);
         days = temperaturelines.length;
+        callback();
+    });
+}
+
+function load_test_dataset(callback){
+    // Load dataset as zip and decompress  - provides faster loading times
+    testlines = []
+    
+    JSZipUtils.getBinaryContent('test.csv.zip', function(err, data) {
+        if(err) {
+        throw err; // or handle err
+        }
+
+        var zip = new JSZip(data);
+        testfile = zip.file("test.csv").asText();
+        testlines = testfile.split(/\r\n|\n/);
         callback();
     });
 }
