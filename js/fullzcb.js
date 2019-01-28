@@ -42,7 +42,6 @@ function fullzcb_init()
     space_heat_base_temperature = 16.0-(385.0/119.0) // 12.8 K
     
     water_heating = 95.84;         // GWh
-    water_heating_daily_demand = water_heating * 1000.0 / 365.25
     
     heatpump_COP = 3.0
     elres_efficiency = 1.0;
@@ -59,24 +58,23 @@ function fullzcb_init()
     heatstore_SOC = heatstore_storage_cap * 0.5;
     
     // Industrial & cooking
-    daily_cooking_elec = 26.94 * 1000.0 / 365.25
-    daily_cooking_biogas = 0.0
-    daily_cooking_biomass = 0.0
+    annual_cooking_elec = 26.94
+    annual_cooking_biogas = 0.0
+    annual_cooking_biomass = 0.0
+        
+    annual_high_temp_process_elec = 12.80
+    annual_high_temp_process_biogas = 36.35
+    annual_high_temp_process_biomass = 0.0
     
-    daily_high_temp_process_elec = 12.80 * 1000.0 / 365.25
-    daily_high_temp_process_biogas = 36.35 * 1000.0 / 365.25
-    daily_high_temp_process_biomass = 0.0
-    
-    daily_low_temp_dry_sep_elec = 79.04 * 1000.0 / 365.25
-    daily_low_temp_dry_sep_biogas = 13.17 * 1000.0 / 365.25
-    daily_low_temp_dry_sep_biomass_CHP = 26.35 * 1000.0 / 365.25
-    
-    daily_non_heat_process_elec = 78.99 * 1000.0 / 365.25
-    daily_non_heat_process_biogas = 11.54 * 1000.0 / 365.25
-    daily_not_heat_process_biomass = 0.0
-    
+    annual_low_temp_dry_sep_elec = 79.04
+    annual_low_temp_dry_sep_biogas = 13.17
+    annual_low_temp_dry_sep_biomass_CHP = 26.35
+        
+    annual_non_heat_process_elec = 78.99
+    annual_non_heat_process_biogas = 11.54
+    annual_not_heat_process_biomass = 0.0
+
     industrial_biofuel = 11.54
-    daily_industrial_biofuel = industrial_biofuel * 1000.0 / 365.25
     
     // Transport
     BEV_demand = 31.29
@@ -85,15 +83,6 @@ function fullzcb_init()
     transport_CH4_demand = 0.0
     transport_biofuels_demand = 59.13
     transport_kerosene_demand = 39.27
-    transport_bioliquid_demand = transport_biofuels_demand + transport_kerosene_demand
-    
-    daily_BEV_demand = BEV_demand * 1000.0 / 365.25
-    daily_elec_trains_demand = electrains_demand * 1000.0 / 365.25
-    daily_transport_H2_demand = transport_H2_demand * 1000.0 / 365.25
-    daily_transport_CH4_demand = transport_CH4_demand * 1000.0 / 365.25
-    daily_transport_biofuels_demand = transport_biofuels_demand * 1000.0 / 365.25
-    daily_transport_kerosene_demand = transport_kerosene_demand * 1000.0 / 365.25
-    daily_transport_liquid_demand = transport_bioliquid_demand * 1000.0 / 365.25
     
     electric_car_battery_capacity = 294.75 // GWh
     electric_car_max_charge_rate = 42.11      // GW
@@ -101,8 +90,6 @@ function fullzcb_init()
     
     biomass_for_biofuel = 143.0
     biomass_for_biogas = 94.0
-    daily_biomass_for_biofuel = biomass_for_biofuel * 1000.0 / 365.25
-    daily_biomass_for_biogas = biomass_for_biogas * 1000.0 / 365.25
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
@@ -125,7 +112,6 @@ function fullzcb_init()
     methane_store_capacity = 70000.0
     
     anaerobic_digestion_efficiency = 0.5747
-    methane_from_biogas = (daily_biomass_for_biogas / 24.0) * anaerobic_digestion_efficiency
     
     // Dispatchable
     dispatch_gen_cap = 45.0
@@ -193,6 +179,40 @@ function fullzcb_run()
     total_nuclear_supply = 0
     total_hydro_supply = 0
 
+    transport_bioliquid_demand = transport_biofuels_demand + transport_kerosene_demand
+
+    water_heating_daily_demand = water_heating * 1000.0 / 365.25    
+    
+    daily_BEV_demand = BEV_demand * 1000.0 / 365.25
+    daily_elec_trains_demand = electrains_demand * 1000.0 / 365.25
+    daily_transport_H2_demand = transport_H2_demand * 1000.0 / 365.25
+    daily_transport_CH4_demand = transport_CH4_demand * 1000.0 / 365.25
+    daily_transport_biofuels_demand = transport_biofuels_demand * 1000.0 / 365.25
+    daily_transport_kerosene_demand = transport_kerosene_demand * 1000.0 / 365.25
+    daily_transport_liquid_demand = transport_bioliquid_demand * 1000.0 / 365.25
+
+    daily_cooking_elec = annual_cooking_elec * 1000.0 / 365.25
+    daily_cooking_biogas = annual_cooking_biogas * 1000.0 / 365.25
+    daily_cooking_biomass = annual_cooking_biogas * 1000.0 / 365.25
+    
+    daily_high_temp_process_elec = annual_high_temp_process_elec * 1000.0 / 365.25
+    daily_high_temp_process_biogas = annual_high_temp_process_biogas * 1000.0 / 365.25
+    daily_high_temp_process_biomass = annual_high_temp_process_biomass * 1000.0 / 365.25
+
+    daily_low_temp_dry_sep_elec = annual_low_temp_dry_sep_elec * 1000.0 / 365.25
+    daily_low_temp_dry_sep_biogas = annual_low_temp_dry_sep_biogas * 1000.0 / 365.25
+    daily_low_temp_dry_sep_biomass_CHP = annual_low_temp_dry_sep_biomass_CHP * 1000.0 / 365.25
+      
+    daily_non_heat_process_elec = annual_non_heat_process_elec * 1000.0 / 365.25
+    daily_non_heat_process_biogas = annual_non_heat_process_biogas * 1000.0 / 365.25
+    daily_not_heat_process_biomass = annual_not_heat_process_biomass * 1000.0 / 365.25
+    
+    daily_industrial_biofuel = industrial_biofuel * 1000.0 / 365.25
+    daily_biomass_for_biofuel = biomass_for_biofuel * 1000.0 / 365.25
+    daily_biomass_for_biogas = biomass_for_biogas * 1000.0 / 365.25
+
+    methane_from_biogas = (daily_biomass_for_biogas / 24.0) * anaerobic_digestion_efficiency
+
     var check = [];
     
     data = {
@@ -206,7 +226,6 @@ function fullzcb_run()
         elecstore_SOC: [],
         hydrogen_SOC: [],
         methane_SOC: []
-        
     }
     
     // move to hourly model if needed
@@ -631,7 +650,7 @@ function fullzcb_run()
     total_initial_elec_balance_positive = total_initial_elec_balance_positive / 10000.0
     total_final_elec_balance_negative = -1 * total_final_elec_balance_negative / 10000.0
     total_final_elec_balance_positive = total_final_elec_balance_positive / 10000.0
-    total_unmet_heat_demand = total_unmet_heat_demand.toFixed(3);
+    total_unmet_heat_demand = (total_unmet_heat_demand/ 10000.0).toFixed(3);
     total_synth_fuel_produced = total_synth_fuel_produced / 10000.0
     total_synth_fuel_biomass_used = total_synth_fuel_biomass_used / 10000.0
     total_methane_made = total_methane_made / 10000.0
