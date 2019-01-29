@@ -4,6 +4,7 @@
 // - roll over average for heatstore
 // - no roll over on +8h heatstore calc
 // - balance_before_elec_store = balance_before_storage - EV_smart_charge, not change to BEV store??
+// - are we accounting for electric requirement for heatstore??
 
 function fullzcb_init()
 {
@@ -253,7 +254,8 @@ function fullzcb_run()
     data = {
         s1_total_variable_supply: [],
         s1_traditional_elec_demand: [],
-        trad_plus_spacewater_elec: [],
+        industry_elec: [],
+        spacewater_elec: [],
         trad_heat_transport_elec: [],
         heatstore: [],
         heatstore_SOC: [],
@@ -262,7 +264,11 @@ function fullzcb_run()
         hydrogen_SOC: [],
         methane_SOC: [],
         electricity_from_dispatchable: [],
-        elec_store_discharge: []
+        elec_store_discharge: [],
+        EV_smart_discharge: [],
+        EV_charge: [],
+        electricity_for_electrolysis: [],
+        export_elec:[]
     }
     
     // move to hourly model if needed
@@ -367,6 +373,7 @@ function fullzcb_run()
         industrial_elec_demand = cooking_elec + high_temp_process_elec + low_temp_process_elec + non_heat_process_elec
         s1_industrial_elec_demand.push(industrial_elec_demand)
         total_industrial_elec_demand += industrial_elec_demand 
+        data.industry_elec.push([time,industrial_elec_demand])
         
         cooking_biogas = cooking_profile[hour%24] * daily_cooking_biogas
         high_temp_process_biogas = high_temp_process_profile[hour%24] * daily_high_temp_process_biogas
@@ -506,11 +513,11 @@ function fullzcb_run()
         spacewater_elec_demand = heatpump_elec_demand + elres_elec_demand // electricity tab
         s3_spacewater_elec_demand.push(spacewater_elec_demand)
         
-        data.trad_plus_spacewater_elec.push([time,data.s1_traditional_elec_demand[hour][1] + spacewater_elec_demand])
+        data.spacewater_elec.push([time,spacewater_elec_demand])
         
-        //heatstore_charge = heatstore_change
-        //if (heatstore_charge<0) heatstore_charge = 0
-        //data.heatstore.push([time,data.s1_traditional_elec_demand[hour][1] + spacewater_elec_demand + heatstore_charge])
+        heatstore_charge = heatstore_change / GWth_GWe
+        if (heatstore_charge<0) heatstore_charge = 0
+        data.heatstore.push([time,heatstore_charge])
                 
         // Balance calculation for BEV storage stage
         s3_balance_before_BEV_storage.push(data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - spacewater_elec_demand)
@@ -561,6 +568,19 @@ function fullzcb_run()
         
         s4_BEV_Store_SOC.push(BEV_Store_SOC)
         data.BEV_Store_SOC.push([time,BEV_Store_SOC])
+        
+        EV_charge = EV_dumb_charge
+        EV_smart_discharge = 0
+        if (EV_smart_charge<0) {
+            EV_smart_discharge = EV_smart_charge * -1
+        } else {
+            EV_charge += EV_smart_charge
+        }
+
+        
+        
+        data.EV_smart_discharge.push([time,EV_smart_discharge])
+        data.EV_charge.push([time,EV_charge])
         
         change_to_BEV_store = -EV_discharge + EV_dumb_charge + EV_smart_charge
         BEV_Store_SOC += change_to_BEV_store
@@ -641,6 +661,7 @@ function fullzcb_run()
         
         hydrogen_from_electrolysis = electricity_for_electrolysis * electrolysis_eff
         total_electrolysis_losses += electricity_for_electrolysis - hydrogen_from_electrolysis
+        data.electricity_for_electrolysis.push([time,electricity_for_electrolysis])
         
         hydrogen_for_hydrogen_vehicles = daily_transport_H2_demand / 24.0
         if (hydrogen_for_hydrogen_vehicles>(hydrogen_SOC_in+hydrogen_from_electrolysis)) hydrogen_for_hydrogen_vehicles = hydrogen_SOC_in+hydrogen_from_electrolysis
@@ -715,11 +736,13 @@ function fullzcb_run()
             total_final_elec_balance_negative += balance_after_electrolysis_and_dispatchable
             final_elec_balance_negative++
         }
+        export_elec = 0
         if (balance_after_electrolysis_and_dispatchable>0) {
             total_final_elec_balance_positive += balance_after_electrolysis_and_dispatchable
             final_elec_balance_positive++
+            export_elec = balance_after_electrolysis_and_dispatchable
         }
-        
+        data.export_elec.push([time,export_elec])
         // ------------------------------------------------------------------------------------
         // Synth fuel
         synth_fuel_produced = hydrogen_to_synth_fuel / FT_process_hydrogen_req
@@ -1002,16 +1025,22 @@ function fullzcb_view(start,end,interval)
     if (view_mode=="")
     {
         $.plot("#placeholder", [
-            // {label: "Electrolysis", data:dataout.EH2, yaxis:1, color:"#00aacc", lines: {lineWidth:0, fill: 1.0 }},
-            //{label: "EV", data:dataout.trad_heat_transport_elec, yaxis:1, color:"#aac15b", lines: {lineWidth:0, fill: 1.0 }},
-            {label: "Heatstore", data:dataout.heatstore, yaxis:1, color:"#cc3311", lines: {lineWidth:0, fill: 1.0 }},
-            {label: "Electric Heat", data:dataout.trad_plus_spacewater_elec, yaxis:1, color:"#cc6622", lines: {lineWidth:0, fill: 1.0 }},
-            {label: "Traditional", data:dataout.s1_traditional_elec_demand, yaxis:1, color:"#0066cc", lines: {lineWidth:0, fill: 1.0 }},
-            {label: "Supply", data:dataout.s1_total_variable_supply, yaxis:1, color:"#000000", lines: {lineWidth:0.2, fill: false }},
+
+            // {label: "Heatstore", data:dataout.heatstore, color:"#cc3311"},
+
+            {stack:true, label: "Traditional", data:dataout.s1_traditional_elec_demand, color:"#0044aa"},
+            {stack:true, label: "Industry & Cooking", data:dataout.industry_elec, color:"#1960d5"},
+            {stack:true, label: "Electric Heat", data:dataout.spacewater_elec, color:"#cc6622"},
+            {stack:true, label: "Heatstore Charge", data:dataout.heatstore, color:"#cc3311"},
+            {stack:true, label: "EV", data:dataout.EV_charge, color:"#aac15b"},
+            {stack:true, label: "Electrolysis", data:dataout.electricity_for_electrolysis, color:"#00aacc"},
+            {stack:true, label: "Exess", data:dataout.export_elec, color:"#33ccff", lines: {lineWidth:0, fill: 0.4 }},            
+            {stack:false, label: "Supply", data:dataout.s1_total_variable_supply, color:"#000000", lines: {lineWidth:0.2, fill: false }}
 
             ], {
+                canvas: true,
+                series: {lines: {lineWidth:0, fill: 1.0 } },
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
-                yaxes: [{},{min: 0, max: 100},{}],
                 grid: {hoverable: true, clickable: true},
                 selection: { mode: "x" },
                 legend: {position: "nw"}
@@ -1038,11 +1067,12 @@ function fullzcb_view(start,end,interval)
     if (view_mode=="backup")
     {
         $.plot("#placeholder", [
+            {label: "CCGT output", data:dataout.electricity_from_dispatchable, yaxis:1, color:"#ccaa00", lines: {lineWidth:0, fill: 1.0 }},
             {label: "Elec Store discharge", data:dataout.elec_store_discharge, yaxis:1, color:"#0000ff", lines: {lineWidth:0, fill: 0.5 }},
             // {label: "CCGT output peaker", data:dataout.CCGT_output_peaker, yaxis:1, color:"#ddbb00", lines: {lineWidth:0, fill: 1.0 }},
-            {label: "CCGT output", data:dataout.electricity_from_dispatchable, yaxis:1, color:"#ccaa00", lines: {lineWidth:0, fill: 1.0 }}
+
             // {label: "CCGT output filter", data:dataout.CCGT_output_filter, yaxis:1, color:"#ff0000", lines: {lineWidth:1, fill:false }},
-            // {label: "Lithium Ion Store", data:dataout.liion_store_level, yaxis:2, color:"#1960d5", lines: {lineWidth:1, fill: false }},
+            {label: "EV Smart discharge", data:dataout.EV_smart_discharge, yaxis:2, color:"#1960d5", lines: {lineWidth:0, fill: 0.5 }}
             // {label: "Unmet before CCGT", data:dataout.unmet_before_CCGT, yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
             // {label: "Unmet sum", data:dataout.unmet_sum, yaxis:1, color:"#0000ff", lines: {lineWidth:1, fill: false }}
 
