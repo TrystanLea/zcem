@@ -602,6 +602,31 @@ table td {
     </div>
 </div>
 
+
+<div class="box">
+    <div class="box-title">
+        <img class="icon-expand" src="img/expand.png"><b>FINAL SUPPLY DEMAND MATCHING
+        <span style="float:right" class="modeloutput" key="prc_demand_supplied_all" dp=3 scale=1 units="%"></span>
+        </b>
+    </div>
+    <div class="inner" style="display:block">
+
+        <div id="stacks_bound" style="width:450; height:530; float:left;">
+            <canvas id="stacks" width="450" height="530"></canvas>
+        </div>
+        
+        <div style="float:left; width:35%;">
+            <p style="font-size:18px">Total supply: <span class="modeloutput" key="total_supply" type="10y"></span></p>
+            <p style="font-size:18px">Total demand: <span class="modeloutput" key="total_demand" type="10y"></span></p>
+            <p style="font-size:18px">Primary energy factor: <span class="modeloutput" key="primary_energy_factor" dp=2 scale=1 units=""></span></p>
+            <p style="font-size:18px">Exess generation: <span class="modeloutput" key="total_exess" type="10y"></span></p>
+            <p style="font-size:18px">Unmet demand: <span class="modeloutput" key="total_unmet_demand" type="10y"></span></p>
+        </div>
+        
+        <div style="clear:both"></div>
+    </div>
+</div>
+
 <p><b>Tests (error)</b><br>
 <div id="tests"></div></p>
 <p><b>Detailed results</b><br>

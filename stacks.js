@@ -100,6 +100,8 @@ function draw_text(ctx,x,mov,text)
 function draw_block(ctx,x,mov,kwh,text,c,scale,unit,width,textscale)
 {
   var fill,border;
+  var dp = 1;
+  if (unit=="TWh/yr") dp = 0;
 
   if (kwh!=0)
   {
@@ -138,11 +140,11 @@ function draw_block(ctx,x,mov,kwh,text,c,scale,unit,width,textscale)
       if (textwidth<width) ctx.fillText(text, x+(width/2),mov+(seg/2)-8+2);
 
       ctx.font = "normal "+textscale+"px arial"; 
-      var textwidth = (""+(kwh).toFixed(1)+unit).length*6.0;
+      var textwidth = (""+(kwh).toFixed(dp)+unit).length*6.0;
       if (textwidth<width) {
-        ctx.fillText((kwh).toFixed(1)+unit, x+(width/2),mov+(seg/2)+8+2);   
+        ctx.fillText((kwh).toFixed(dp)+unit, x+(width/2),mov+(seg/2)+8+2);   
       } else {
-         ctx.fillText((kwh).toFixed(1), x+(width/2),mov+(seg/2)+8+2);   
+         ctx.fillText((kwh).toFixed(dp), x+(width/2),mov+(seg/2)+8+2);   
       }
     }
   }

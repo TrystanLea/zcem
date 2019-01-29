@@ -26,6 +26,7 @@ function fullzcb_init()
     // Availability factors
     offshore_wind_availability = 0.9
     onshore_wind_availability = 0.9
+    nuclear_availability = 0.0
     
     // Capacity factors
     // All other technologies based on hourly datasets
@@ -186,9 +187,23 @@ function fullzcb_run()
     total_nuclear_supply = 0
     total_hydro_supply = 0
     
-    total_industrial_biomass_demand = 0
     total_biomass_used = 0
-
+    total_supply = 0
+    
+    // demand totals
+    total_traditional_elec = 0
+    total_space_heat_demand = 0
+    
+    total_industrial_elec_demand = 0
+    total_industrial_methane_demand = 0
+    total_industrial_biomass_demand = 0
+    
+    total_grid_losses = 0
+    total_electrolysis_losses = 0
+    total_CCGT_losses = 0
+    total_sabatier_losses = 0
+    total_FT_losses = 0
+    
     change_traditional_demand = 1.0 - (prc_reduction_traditional_demand/100)
 
     transport_bioliquid_demand = transport_biofuels_demand + transport_kerosene_demand
@@ -245,7 +260,9 @@ function fullzcb_run()
         BEV_Store_SOC: [],
         elecstore_SOC: [],
         hydrogen_SOC: [],
-        methane_SOC: []
+        methane_SOC: [],
+        electricity_from_dispatchable: [],
+        elec_store_discharge: []
     }
     
     // move to hourly model if needed
@@ -291,6 +308,9 @@ function fullzcb_run()
         pv_power_supply = solarpv_capacity * capacityfactors[4]
         geothermal_power_supply = geothermal_elec_capacity * geothermal_elec_cf
         hydro_power_supply = hydro_capacity * hydro_cf
+        
+        // non-variable non-backup electricity supply
+        nuclear_power_supply = nuclear_capacity * nuclear_availability
         chp_power_supply = 0.0
         
         total_offshore_wind_supply += offshore_wind_power_supply
@@ -301,14 +321,18 @@ function fullzcb_run()
         total_geothermal_elec += geothermal_power_supply
         total_hydro_supply += hydro_power_supply
         
-        total_variable_power_supply = offshore_wind_power_supply + onshore_wind_power_supply + wave_power_supply + tidal_power_supply + pv_power_supply + geothermal_power_supply + hydro_power_supply + chp_power_supply
+        electricity_supply = offshore_wind_power_supply + onshore_wind_power_supply + wave_power_supply + tidal_power_supply + pv_power_supply + geothermal_power_supply + hydro_power_supply + chp_power_supply + nuclear_power_supply
+        total_supply += electricity_supply
         
-        supply = total_variable_power_supply * (1.0-grid_loss_prc)
+        supply = electricity_supply * (1.0-grid_loss_prc)
         data.s1_total_variable_supply.push([time,supply])
+        
+        total_grid_losses += electricity_supply - supply
         
         // 2. Traditional electricity demand
         traditional_elec_demand = capacityfactors[5] * change_traditional_demand
         data.s1_traditional_elec_demand.push([time,traditional_elec_demand])
+        total_traditional_elec += traditional_elec_demand
         // ---------------------------------------------------------------------------
         // Space & Water Heat part 1
         // ---------------------------------------------------------------------------
@@ -318,6 +342,7 @@ function fullzcb_run()
         solarthermal_supply = solarthermal_capacity * capacityfactors[4]
         geothermal_heat_supply = geothermal_heat_capacity * geothermal_heat_cf
         space_heat_demand = degree_hours * specific_space_heat_demand * 24.0 * space_heat_profile[hour%24]
+        total_space_heat_demand += space_heat_demand
         
         hot_water_demand = hot_water_profile[hour%24] * water_heating_daily_demand
         spacewater_demand_before_heatstore = space_heat_demand + hot_water_demand - geothermal_heat_supply - solarthermal_supply
@@ -341,12 +366,14 @@ function fullzcb_run()
         non_heat_process_elec = not_heat_process_profile[hour%24] * daily_non_heat_process_elec
         industrial_elec_demand = cooking_elec + high_temp_process_elec + low_temp_process_elec + non_heat_process_elec
         s1_industrial_elec_demand.push(industrial_elec_demand)
+        total_industrial_elec_demand += industrial_elec_demand 
         
         cooking_biogas = cooking_profile[hour%24] * daily_cooking_biogas
         high_temp_process_biogas = high_temp_process_profile[hour%24] * daily_high_temp_process_biogas
         low_temp_process_biogas = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biogas
         non_heat_process_biogas = not_heat_process_profile[hour%24] * daily_non_heat_process_biogas
         industrial_methane_demand = cooking_biogas+high_temp_process_biogas+low_temp_process_biogas+non_heat_process_biogas
+        
 
         cooking_biogas_CHP = cooking_profile[hour%24] * daily_cooking_biogas_CHP
         high_temp_process_biogas_CHP = high_temp_process_profile[hour%24] * daily_high_temp_process_biogas_CHP
@@ -355,13 +382,14 @@ function fullzcb_run()
         industrial_biogas_CHP_demand = cooking_biogas_CHP + high_temp_process_biogas_CHP + low_temp_process_biogas_CHP + non_heat_process_biogas_CHP        
         
         s1_methane_for_industry.push(industrial_methane_demand+industrial_biogas_CHP_demand)
+        total_industrial_methane_demand += industrial_methane_demand+industrial_biogas_CHP_demand
         
         cooking_biomass = cooking_profile[hour%24] * daily_cooking_biomass
         high_temp_process_biomass = high_temp_process_profile[hour%24] * daily_high_temp_process_biomass
         low_temp_process_biomass = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass
         non_heat_process_biomass = not_heat_process_profile[hour%24] * daily_non_heat_process_biomass
         industrial_biomass_demand = cooking_biomass + high_temp_process_biomass + low_temp_process_biomass + non_heat_process_biomass
-        
+                
         cooking_biomass_CHP = cooking_profile[hour%24] * daily_cooking_biomass_CHP
         high_temp_process_biomass_CHP = high_temp_process_profile[hour%24] * daily_high_temp_process_biomass_CHP
         low_temp_process_biomass_CHP = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass_CHP
@@ -369,6 +397,7 @@ function fullzcb_run()
         industrial_biomass_CHP_demand = cooking_biomass_CHP + high_temp_process_biomass_CHP + low_temp_process_biomass_CHP + non_heat_process_biomass_CHP
 
         s1_biomass_for_industry.push(industrial_biomass_demand+industrial_biomass_CHP_demand)
+        total_industrial_biomass_demand += industrial_biomass_demand + industrial_biomass_CHP_demand
     }
     loading_prc(40,"model stage 1");
 
@@ -592,6 +621,12 @@ function fullzcb_run()
         if (elecstore_SOC<0) elecstore_SOC = 0                                                              // limits here can loose energy in the calc
         if (elecstore_SOC>elec_store_storage_cap) elecstore_SOC = elec_store_storage_cap                    // limits here can loose energy in the calc
         
+        elec_store_discharge = 0
+        if (elec_store_change<0) {
+            elec_store_discharge = elec_store_change * -1
+        }
+        data.elec_store_discharge.push([time,elec_store_discharge])
+        
         // ----------------------------------------------------------------------------
         // Hydrogen
         // ----------------------------------------------------------------------------
@@ -605,6 +640,7 @@ function fullzcb_run()
         }
         
         hydrogen_from_electrolysis = electricity_for_electrolysis * electrolysis_eff
+        total_electrolysis_losses += electricity_for_electrolysis - hydrogen_from_electrolysis
         
         hydrogen_for_hydrogen_vehicles = daily_transport_H2_demand / 24.0
         if (hydrogen_for_hydrogen_vehicles>(hydrogen_SOC_in+hydrogen_from_electrolysis)) hydrogen_for_hydrogen_vehicles = hydrogen_SOC_in+hydrogen_from_electrolysis
@@ -641,11 +677,19 @@ function fullzcb_run()
         balance_after_electrolysis_and_dispatchable = balance_after_storage - electricity_for_electrolysis + electricity_from_dispatchable
         s5_final_balance.push(balance_after_electrolysis_and_dispatchable)
         total_electricity_from_dispatchable += electricity_from_dispatchable
-        if (electricity_from_dispatchable>max_dispatchable_capacity) max_dispatchable_capacity = electricity_from_dispatchable
+        if (electricity_from_dispatchable>max_dispatchable_capacity) max_dispatchable_capacity += electricity_from_dispatchable // records max used capacity
+        
+        data.electricity_from_dispatchable.push([time,electricity_from_dispatchable])
+        
+        total_CCGT_losses += ((1.0/dispatchable_gen_eff)-1.0) * electricity_from_dispatchable
         // ----------------------------------------------------------------------------
         // Methane
         // ----------------------------------------------------------------------------
         methane_from_hydrogen = hydrogen_to_methanation * methanation_efficiency
+        
+        total_sabatier_losses += ((1.0/anaerobic_digestion_efficiency)-1.0) * methane_from_biogas
+        total_sabatier_losses += hydrogen_to_methanation - methane_from_hydrogen
+        
         // methane_from_biogas: calculated at start
         total_methane_made += methane_from_hydrogen + methane_from_biogas
         methane_to_dispatchable = electricity_from_dispatchable / dispatchable_gen_eff
@@ -684,6 +728,8 @@ function fullzcb_run()
         total_synth_fuel_produced += synth_fuel_produced
         total_synth_fuel_biomass_used += synth_fuel_biomass_used
         
+        total_FT_losses += (hydrogen_to_synth_fuel + synth_fuel_biomass_used) - synth_fuel_produced
+        
         // ------------------------------------------------------------------------------------
         // Biomass  
         biomass_used = 0
@@ -696,6 +742,37 @@ function fullzcb_run()
         
     }
     loading_prc(80,"model stage 5");
+
+    // -------------------------------------------------------------------------------
+        
+    total_unmet_demand = 0
+    total_supply += total_solarthermal
+    total_supply += total_geothermal_heat
+    total_supply += total_biomass_used
+    
+    total_demand = 0
+    total_demand += total_traditional_elec 
+    total_demand += total_space_heat_demand
+    total_demand += total_industrial_elec_demand
+    total_demand += total_industrial_methane_demand
+    total_demand += total_industrial_biomass_demand
+    
+    total_demand += BEV_demand*10000.0
+    total_demand += electrains_demand*10000.0
+    total_demand += transport_H2_demand*10000.0
+    total_demand += transport_CH4_demand*10000.0
+    total_demand += transport_biofuels_demand*10000.0
+    total_demand += transport_kerosene_demand*10000.0
+    
+    total_exess = total_final_elec_balance_positive; //total_supply - total_demand
+    total_losses = total_grid_losses + total_electrolysis_losses + total_CCGT_losses + total_sabatier_losses + total_FT_losses
+    
+    unaccounted_balance = total_supply - total_demand - total_losses - total_exess
+    console.log("unaccounted_balance: "+unaccounted_balance)
+    
+    primary_energy_factor = total_supply / total_demand
+    
+    // -------------------------------------------------------------------------------
     
     total_initial_elec_balance_positive = total_initial_elec_balance_positive / 10000.0
     total_final_elec_balance_negative = -1 * total_final_elec_balance_negative / 10000.0
@@ -705,7 +782,6 @@ function fullzcb_run()
     total_synth_fuel_biomass_used = total_synth_fuel_biomass_used / 10000.0
     total_methane_made = total_methane_made / 10000.0
     total_electricity_from_dispatchable /= 10000.0
-    total_industrial_biomass_demand /= 10000.0
     total_biomass_used /= 10000.0
     
     liquid_fuel_produced_prc_diff = 100 * (total_synth_fuel_produced - (transport_bioliquid_demand+industrial_biofuel)) / (transport_bioliquid_demand+industrial_biofuel)
@@ -718,7 +794,7 @@ function fullzcb_run()
     methane_store_full_prc = 100*methane_store_full_count / hours
     hydrogen_store_empty_prc = 100*hydrogen_store_empty_count / hours
     hydrogen_store_full_prc = 100*hydrogen_store_full_count / hours
-    
+      
     // ----------------------------------------------------------------------------
     // Tests
     // ----------------------------------------------------------------------------
@@ -850,6 +926,73 @@ function fullzcb_run()
         
         $(this).html("<span>"+(1*window[key]*scale).toFixed(dp)+"</span><span style='font-size:90%'>"+units+"</span>");
     });
+
+    // Energy stacks visualisation definition
+    var scl = 1.0/10000.0;
+    var units = "TWh/yr";
+    var stacks = [
+      {"name":"Supply","height":(total_supply+total_unmet_demand)*scl,"saving":0,
+        "stack":[
+          {"kwhd":total_supply*scl,"name":"Supply","color":1},
+          {"kwhd":total_unmet_demand*scl,"name":"Unmet","color":3}
+        ]
+      },
+      {"name":"Supply","height":(total_supply+total_unmet_demand)*scl,"saving":0,
+        "stack":[
+          {"kwhd":total_offshore_wind_supply*scl,"name":"Offshore Wind","color":1},
+          {"kwhd":total_onshore_wind_supply*scl,"name":"Onshore Wind","color":1},
+          {"kwhd":total_solar_supply*scl,"name":"Solar PV","color":1},
+          {"kwhd":total_solarthermal*scl,"name":"Solar Thermal","color":1},
+          {"kwhd":total_wave_supply*scl,"name":"Wave","color":1},
+          {"kwhd":total_tidal_supply*scl,"name":"Tidal","color":1},
+          {"kwhd":total_hydro_supply*scl,"name":"Hydro","color":1},
+          {"kwhd":total_geothermal_elec*scl,"name":"Geo Thermal Elec","color":1},
+          {"kwhd":total_geothermal_heat*scl,"name":"Geo Thermal Heat","color":1},
+          {"kwhd":total_nuclear_supply*scl,"name":"Nuclear","color":1},
+          {"kwhd":total_biomass_used,"name":"Biomass","color":1}
+          //{"kwhd":total_unmet_demand/3650,"name":"Unmet","color":3}
+          
+        ]
+      },
+      
+      {"name":"Demand","height":(total_demand+total_losses+total_exess)*scl,"saving":0,
+        "stack":[
+          {"kwhd":total_demand*scl,"name":"Demand","color":0},
+          {"kwhd":total_losses*scl,"name":"Losses","color":2},
+          {"kwhd":total_exess*scl,"name":"Exess","color":3}
+        ]
+      },
+
+      {"name":"Demand","height":(total_demand+total_losses)*scl,"saving":0,
+        "stack":[
+          {"kwhd":total_traditional_elec*scl,"name":"Trad Elec","color":0},
+          {"kwhd":total_space_heat_demand*scl,"name":"Space & Water","color":0},
+          {"kwhd":BEV_demand+electrains_demand,"name":"Electric Transport","color":0},
+          {"kwhd":transport_H2_demand,"name":"Hydrogen Transport","color":0},
+          {"kwhd":transport_CH4_demand,"name":"Methane Transport","color":0},
+          {"kwhd":transport_biofuels_demand,"name":"Biofuel Transport","color":0},
+          {"kwhd":transport_kerosene_demand,"name":"Aviation","color":0},
+          // Industry
+          {"kwhd":total_industrial_elec_demand*scl,"name":"Industry Electric","color":0},
+          {"kwhd":total_industrial_methane_demand*scl,"name":"Industry Methane","color":0},
+          {"kwhd":total_industrial_biomass_demand*scl,"name":"Industry Biomas","color":0},/*
+          {"kwhd":total_industry_solid/3650,"name":"Industry Biomass","color":0},
+          // Backup, liquid and gas processes*/
+          {"kwhd":total_grid_losses*scl,"name":"Grid losses","color":2},
+          {"kwhd":total_electrolysis_losses*scl,"name":"H2 losses","color":2},
+          {"kwhd":total_CCGT_losses*scl,"name":"CCGT losses","color":2},
+          {"kwhd":total_FT_losses*scl,"name":"FT losses","color":2},
+          {"kwhd":total_sabatier_losses*scl,"name":"Sabatier losses","color":2},/*
+          {"kwhd":total_direct_gas_losses/3650,"name":"Direct gas loss","color":2},
+          {"kwhd":total_direct_liquid_losses/3650,"name":"Direct liquid loss","color":2},
+
+          {"kwhd":total_liion_losses/3650,"name":"Liion losses","color":2},
+          {"kwhd":total_losses*scl,"name":"Losses","color":2},*/
+          {"kwhd":total_exess*scl,"name":"Exess","color":3}
+        ]
+      }
+    ];
+    draw_stacks(stacks,"stacks",1000,600,units)   
 }
 // ---------------------------------------------------------------------------    
 	
@@ -886,6 +1029,26 @@ function fullzcb_view(start,end,interval)
             ], {
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
                 yaxes: [{},{min: 0},{}],
+                grid: {hoverable: true, clickable: true},
+                selection: { mode: "x" },
+                legend: {position: "nw"}
+            }
+        );
+    }
+    if (view_mode=="backup")
+    {
+        $.plot("#placeholder", [
+            {label: "Elec Store discharge", data:dataout.elec_store_discharge, yaxis:1, color:"#0000ff", lines: {lineWidth:0, fill: 0.5 }},
+            // {label: "CCGT output peaker", data:dataout.CCGT_output_peaker, yaxis:1, color:"#ddbb00", lines: {lineWidth:0, fill: 1.0 }},
+            {label: "CCGT output", data:dataout.electricity_from_dispatchable, yaxis:1, color:"#ccaa00", lines: {lineWidth:0, fill: 1.0 }}
+            // {label: "CCGT output filter", data:dataout.CCGT_output_filter, yaxis:1, color:"#ff0000", lines: {lineWidth:1, fill:false }},
+            // {label: "Lithium Ion Store", data:dataout.liion_store_level, yaxis:2, color:"#1960d5", lines: {lineWidth:1, fill: false }},
+            // {label: "Unmet before CCGT", data:dataout.unmet_before_CCGT, yaxis:1, color:"#000000", lines: {lineWidth:1, fill: false }},
+            // {label: "Unmet sum", data:dataout.unmet_sum, yaxis:1, color:"#0000ff", lines: {lineWidth:1, fill: false }}
+
+            ], {
+                xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
+                yaxes: [{},{min: 0, max: 100},{}],
                 grid: {hoverable: true, clickable: true},
                 selection: { mode: "x" },
                 legend: {position: "nw"}
