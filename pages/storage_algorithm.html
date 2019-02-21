@@ -1,0 +1,62 @@
+<h2>Storage algorithm</h2>
+
+Supply:
+<select id="storage_algorithm_gen_type" autocomplete="off">
+    <option value=0 selected="selected">Onshore wind</option>
+    <option value=1>Offshore wind</option>
+    <option value=2>Wave power</option>
+    <option value=3>Tidal power</option>
+    <option value=4>Solar power</option>
+</select>
+
+Oversupply:
+<select id="storage_algorithm_oversupply" autocomplete="off">
+    <option value=1.0 selected="selected">100%</option>
+    <option value=1.1>110%</option>
+    <option value=1.2>120%</option>
+    <option value=1.3>130%</option>
+    <option value=1.4>140%</option>
+    <option value=1.5>150%</option>
+</select>
+
+View:
+<button id="pan-left"><</button>
+<button id="pan-right">></button>
+<button id="zoom-out">-</button>
+<button id="zoom-in">+</button>
+<button id="reset">reset</button>
+
+<br><br>
+
+Store type:
+<select id="storage_algorithm_store_type" autocomplete="off">
+    <option value="nostore">No storage</option>
+    <option value="basic">Basic, flat out</option>
+    <option value="basicSOC">Slow charge at high SOC, slow discharge at low SOC</option>
+    <option value="forecast">forecast</option>
+    <option value="average">Proportional: average</option>
+    <option value="average_8h_sum">Proportional: average and forward sum</option>
+</select>
+
+<table style="margin-top:10px"><tr><td>
+  Store capacity (kWh):
+  <input class="modelinput" key="store_cap" type="text" style="width:100px" value="" autocomplete="off"/>
+</td>
+<td>
+  Average or forecast length:
+  <select id="average_length" autocomplete="off">
+      <option value="12">+-12h</option>
+      <option value="24">+-24h</option>
+      <option value="48">+-2days</option>
+      <option value="96">+-4days</option>
+      <option value="168">+-7days</option>
+  </select>
+</td></tr></table>
+
+<div id="placeholder_bound" style="width:100%">
+    <div id="placeholder"></div>
+</div>
+
+<pre id="out" style="font-size:16px; line-height:28px"></pre>
+
+<button class="view-source">View source code</button>
