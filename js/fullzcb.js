@@ -5,6 +5,7 @@
 // - no roll over on +8h heatstore calc
 // - balance_before_elec_store = balance_before_storage - EV_smart_charge, not change to BEV store??
 // - are we accounting for electric requirement for heatstore??
+// - methane losses from store capping
 
 function fullzcb_init()
 {
@@ -150,14 +151,22 @@ function fullzcb_init()
 
 function fullzcb_run()
 {
+    heatstore_SOC_start = heatstore_storage_cap * 0.5
+    BEV_Store_SOC_start = electric_car_battery_capacity * 0.5
+    elecstore_SOC_start = elec_store_storage_cap * 1.0
+    hydrogen_SOC_start = hydrogen_storage_cap * 0.5
+    methane_SOC_start = methane_store_capacity * 0.5
+    
+    heatstore_SOC = heatstore_SOC_start
+    BEV_Store_SOC = BEV_Store_SOC_start
+    elecstore_SOC = elecstore_SOC_start
+    hydrogen_SOC_in = hydrogen_SOC_start
+    methane_SOC = methane_SOC_start
 
-    heatstore_SOC = heatstore_storage_cap * 0.5
-    BEV_Store_SOC = electric_car_battery_capacity * 0.5
-    elecstore_SOC = elec_store_storage_cap * 1.0
-
-    hydrogen_SOC_in = hydrogen_storage_cap * 0.5
     hydrogen_SOC_out = 0.0
-    methane_SOC = methane_store_capacity * 0.5
+    
+    total_EV_dumb_charge = 0
+    total_elec_trains_demand = 0
     
     initial_elec_balance_positive = 0
     final_elec_balance_negative = 0
@@ -190,6 +199,7 @@ function fullzcb_run()
     
     total_biomass_used = 0
     total_supply = 0
+    total_ambient_heat_supply = 0
     
     // demand totals
     total_traditional_elec = 0
@@ -199,11 +209,19 @@ function fullzcb_run()
     total_industrial_methane_demand = 0
     total_industrial_biomass_demand = 0
     
+    total_hydrogen_for_hydrogen_vehicles = 0
+    
     total_grid_losses = 0
     total_electrolysis_losses = 0
     total_CCGT_losses = 0
     total_sabatier_losses = 0
     total_FT_losses = 0
+    
+    total_synth_fuel_demand = 0
+    
+    hydrogen_store_vented = 0
+    methane_store_vented = 0
+    total_heat_spill = 0
     
     change_traditional_demand = 1.0 - (prc_reduction_traditional_demand/100)
 
@@ -246,8 +264,9 @@ function fullzcb_run()
     daily_industrial_biofuel = industrial_biofuel * 1000.0 / 365.25
     daily_biomass_for_biofuel = biomass_for_biofuel * 1000.0 / 365.25
     daily_biomass_for_biogas = biomass_for_biogas * 1000.0 / 365.25
+    hourly_biomass_for_biogas = daily_biomass_for_biogas / 24.0
 
-    methane_from_biogas = (daily_biomass_for_biogas / 24.0) * anaerobic_digestion_efficiency
+    methane_from_biogas = hourly_biomass_for_biogas * anaerobic_digestion_efficiency
 
     var check = [];
     
@@ -351,6 +370,8 @@ function fullzcb_run()
         total_space_heat_demand += space_heat_demand
         
         hot_water_demand = hot_water_profile[hour%24] * water_heating_daily_demand
+        total_space_heat_demand += hot_water_demand
+        
         spacewater_demand_before_heatstore = space_heat_demand + hot_water_demand - geothermal_heat_supply - solarthermal_supply
         
         // Heatstore p1
@@ -491,6 +512,7 @@ function fullzcb_run()
         s3_heatstore_SOC.push(heatstore_SOC)
         data.heatstore_SOC.push([time,heatstore_SOC])
         heatstore_SOC += heatstore_change
+        total_heat_spill += heat_spill
                 
         // space & water heat tab
         
@@ -501,6 +523,7 @@ function fullzcb_run()
         heat_from_elres = spacewater_demand_after_heatstore * spacewater_share_elres
         heat_from_biomass = spacewater_demand_after_heatstore * spacewater_share_biomass
         ambient_heat_used = heat_from_heatpumps * (1.0-1.0/heatpump_COP)
+        total_ambient_heat_supply += ambient_heat_used
         heatpump_elec_demand = heat_from_heatpumps / heatpump_COP
         elres_elec_demand = heat_from_elres / elres_efficiency
         
@@ -535,8 +558,11 @@ function fullzcb_run()
         var time = datastarttime + (hour * 3600 * 1000);
         
         elec_trains_demand = elec_trains_use_profile[hour%24] * daily_elec_trains_demand
+        total_elec_trains_demand += elec_trains_demand
+        
         EV_discharge = BEV_use_profile[hour%24] * daily_BEV_demand
         EV_dumb_charge = BEV_charge_profile[hour%24] * daily_BEV_demand
+        total_EV_dumb_charge += EV_dumb_charge
         
         // +- 12 h average of balance before BEV Storage
         var sum = 0; var n = 0;
@@ -576,8 +602,6 @@ function fullzcb_run()
         } else {
             EV_charge += EV_smart_charge
         }
-
-        
         
         data.EV_smart_discharge.push([time,EV_smart_discharge])
         data.EV_charge.push([time,EV_charge])
@@ -585,7 +609,6 @@ function fullzcb_run()
         change_to_BEV_store = -EV_discharge + EV_dumb_charge + EV_smart_charge
         BEV_Store_SOC += change_to_BEV_store
         if (BEV_Store_SOC>electric_car_battery_capacity) BEV_Store_SOC = electric_car_battery_capacity
-        
         
         electricity_for_transport = elec_trains_demand + EV_dumb_charge
         
@@ -665,13 +688,15 @@ function fullzcb_run()
         
         hydrogen_for_hydrogen_vehicles = daily_transport_H2_demand / 24.0
         if (hydrogen_for_hydrogen_vehicles>(hydrogen_SOC_in+hydrogen_from_electrolysis)) hydrogen_for_hydrogen_vehicles = hydrogen_SOC_in+hydrogen_from_electrolysis
+        total_hydrogen_for_hydrogen_vehicles += hydrogen_for_hydrogen_vehicles
         
-        hydrogen_to_synth_fuel = ((daily_biomass_for_biofuel/24.0)/FT_process_biomass_req)*FT_process_hydrogen_req
+        hourly_biomass_for_biofuel = daily_biomass_for_biofuel/24.0
+        hydrogen_to_synth_fuel = (hourly_biomass_for_biofuel/FT_process_biomass_req)*FT_process_hydrogen_req
         
-        hydrogen_to_methanation = hydrogen_SOC_in+hydrogen_from_electrolysis-hydrogen_for_hydrogen_vehicles
-        if (hydrogen_to_synth_fuel>hydrogen_to_methanation) hydrogen_to_synth_fuel=hydrogen_to_methanation
+        //hydrogen_to_methanation = hydrogen_SOC_in+hydrogen_from_electrolysis-hydrogen_for_hydrogen_vehicles
+        //if (hydrogen_to_synth_fuel>hydrogen_to_methanation) hydrogen_to_synth_fuel=hydrogen_to_methanation
         
-        hydrogen_to_methanation = methane_from_biogas/methanation_raw_biogas_to_H2_ratio
+        hydrogen_to_methanation = methane_from_biogas/methanation_raw_biogas_to_H2_ratio // max limit on hydrogen to methanation is biogas supply level
         available_hydrogen = hydrogen_SOC_in-(hydrogen_storage_cap*minimum_hydrogen_store_level)+hydrogen_from_electrolysis-hydrogen_for_hydrogen_vehicles-hydrogen_to_synth_fuel
         if (hydrogen_to_methanation>available_hydrogen) hydrogen_to_methanation = available_hydrogen
         if (hydrogen_to_methanation>methanation_capacity) hydrogen_to_methanation = methanation_capacity
@@ -685,7 +710,10 @@ function fullzcb_run()
         if ((hydrogen_SOC_in/hydrogen_storage_cap)>0.99) hydrogen_store_full_count ++
         
         hydrogen_SOC_in  = hydrogen_SOC_out
-        if (hydrogen_SOC_in>hydrogen_storage_cap) hydrogen_SOC_in = hydrogen_storage_cap
+        if (hydrogen_SOC_in>hydrogen_storage_cap) {
+            hydrogen_store_vented += hydrogen_SOC_in - hydrogen_storage_cap
+            hydrogen_SOC_in = hydrogen_storage_cap
+        }
         
         // ----------------------------------------------------------------------------
         // Dispatchable
@@ -707,9 +735,8 @@ function fullzcb_run()
         // Methane
         // ----------------------------------------------------------------------------
         methane_from_hydrogen = hydrogen_to_methanation * methanation_efficiency
-        
-        total_sabatier_losses += ((1.0/anaerobic_digestion_efficiency)-1.0) * methane_from_biogas
         total_sabatier_losses += hydrogen_to_methanation - methane_from_hydrogen
+        total_sabatier_losses += hourly_biomass_for_biogas - methane_from_biogas
         
         // methane_from_biogas: calculated at start
         total_methane_made += methane_from_hydrogen + methane_from_biogas
@@ -726,14 +753,17 @@ function fullzcb_run()
         if ((methane_SOC/methane_store_capacity)>0.99) methane_store_full_count ++
         
         methane_SOC += methane_balance
-        if (methane_SOC>methane_store_capacity) methane_SOC = methane_store_capacity
+        if (methane_SOC>methane_store_capacity) {
+            methane_store_vented += methane_SOC - methane_store_capacity // vented methane!!?
+            methane_SOC = methane_store_capacity
+        }
         
         if (balance_after_storage>0) {
             total_initial_elec_balance_positive += balance_after_storage
             initial_elec_balance_positive++
         }
         if (balance_after_electrolysis_and_dispatchable<0) {
-            total_final_elec_balance_negative += balance_after_electrolysis_and_dispatchable
+            total_final_elec_balance_negative += -1*balance_after_electrolysis_and_dispatchable
             final_elec_balance_negative++
         }
         export_elec = 0
@@ -746,19 +776,22 @@ function fullzcb_run()
         // ------------------------------------------------------------------------------------
         // Synth fuel
         synth_fuel_produced = hydrogen_to_synth_fuel / FT_process_hydrogen_req
-        synth_fuel_biomass_used = synth_fuel_produced * FT_process_biomass_req
+        // synth_fuel_biomass_used = synth_fuel_produced * FT_process_biomass_req
         
         total_synth_fuel_produced += synth_fuel_produced
-        total_synth_fuel_biomass_used += synth_fuel_biomass_used
+        total_synth_fuel_biomass_used += hourly_biomass_for_biofuel
         
-        total_FT_losses += (hydrogen_to_synth_fuel + synth_fuel_biomass_used) - synth_fuel_produced
+        total_FT_losses += (hydrogen_to_synth_fuel + hourly_biomass_for_biofuel) - synth_fuel_produced
+        
+        synth_fuel_demand = daily_transport_liquid_demand / 24.0
+        total_synth_fuel_demand += synth_fuel_demand
         
         // ------------------------------------------------------------------------------------
         // Biomass  
         biomass_used = 0
         biomass_used += methane_from_biogas / anaerobic_digestion_efficiency 
         biomass_used += s1_biomass_for_industry[hour]
-        biomass_used += synth_fuel_biomass_used
+        biomass_used += hourly_biomass_for_biofuel
         biomass_used += s3_heat_from_biomass[hour]
         
         total_biomass_used += biomass_used
@@ -768,7 +801,9 @@ function fullzcb_run()
 
     // -------------------------------------------------------------------------------
         
-    total_unmet_demand = 0
+    total_unmet_demand = total_final_elec_balance_negative
+    
+    total_supply += total_ambient_heat_supply
     total_supply += total_solarthermal
     total_supply += total_geothermal_heat
     total_supply += total_biomass_used
@@ -780,25 +815,66 @@ function fullzcb_run()
     total_demand += total_industrial_methane_demand
     total_demand += total_industrial_biomass_demand
     
-    total_demand += BEV_demand*10000.0
-    total_demand += electrains_demand*10000.0
-    total_demand += transport_H2_demand*10000.0
+    total_demand += total_EV_dumb_charge
+    total_demand += total_elec_trains_demand
+    total_demand += total_hydrogen_for_hydrogen_vehicles
     total_demand += transport_CH4_demand*10000.0
-    total_demand += transport_biofuels_demand*10000.0
-    total_demand += transport_kerosene_demand*10000.0
+    total_demand += total_synth_fuel_demand
     
-    total_exess = total_final_elec_balance_positive; //total_supply - total_demand
-    total_losses = total_grid_losses + total_electrolysis_losses + total_CCGT_losses + total_sabatier_losses + total_FT_losses
+    // -------------------------------------------------------------------------------------------------
+    final_store_balance = 0
     
-    unaccounted_balance = total_supply - total_demand - total_losses - total_exess
-    console.log("unaccounted_balance: "+unaccounted_balance)
+    heatstore_additions =  heatstore_SOC - heatstore_SOC_start
+    console.log("heatstore_additions: "+heatstore_additions)
+    final_store_balance += heatstore_additions
+
+    BEV_store_additions =  BEV_Store_SOC - BEV_Store_SOC_start
+    console.log("BEV_store_additions: "+BEV_store_additions)
+    final_store_balance += BEV_store_additions
+
+    elecstore_additions =  elecstore_SOC - heatstore_SOC_start
+    console.log("elecstore_additions: "+elecstore_additions)
+    final_store_balance += elecstore_additions
+        
+    hydrogen_store_additions = hydrogen_SOC_out - hydrogen_SOC_start
+    console.log("hydrogen_store_additions: "+hydrogen_store_additions)
+    final_store_balance += hydrogen_store_additions
+    
+    methane_store_additions = methane_SOC - methane_SOC_start
+    console.log("methane_store_additions: "+methane_store_additions)
+    final_store_balance += methane_store_additions
+
+    console.log("final_store_balance: "+final_store_balance)
+    
+    console.log("total_heat_spill: "+total_heat_spill);
+    
+    synth_fuel_balance = total_synth_fuel_produced - total_synth_fuel_demand
+    
+    synth_fuel_excess = 0
+    synth_fuel_unmet = 0
+    if (synth_fuel_balance>0) {
+       synth_fuel_excess = synth_fuel_balance;
+    } else {
+       synth_fuel_unmet = -1*synth_fuel_balance;  
+    }
+    total_unmet_demand += synth_fuel_unmet
+    
+    total_spill = methane_store_vented + hydrogen_store_vented + total_heat_spill + synth_fuel_excess
+    
+    // -------------------------------------------------------------------------------------------------
+    total_exess = total_final_elec_balance_positive + final_store_balance; //total_supply - total_demand
+    total_losses = total_grid_losses + total_electrolysis_losses + total_CCGT_losses + total_sabatier_losses + total_FT_losses + total_spill
+    
+    unaccounted_balance = total_supply + total_unmet_demand - total_demand - total_losses - total_exess
+    console.log("unaccounted_balance: "+unaccounted_balance.toFixed(6))
+    // -------------------------------------------------------------------------------------------------
     
     primary_energy_factor = total_supply / total_demand
     
     // -------------------------------------------------------------------------------
     
     total_initial_elec_balance_positive = total_initial_elec_balance_positive / 10000.0
-    total_final_elec_balance_negative = -1 * total_final_elec_balance_negative / 10000.0
+    total_final_elec_balance_negative = total_final_elec_balance_negative / 10000.0
     total_final_elec_balance_positive = total_final_elec_balance_positive / 10000.0
     total_unmet_heat_demand = (total_unmet_heat_demand/ 10000.0).toFixed(3);
     total_synth_fuel_produced = total_synth_fuel_produced / 10000.0
@@ -972,9 +1048,9 @@ function fullzcb_run()
           {"kwhd":total_geothermal_elec*scl,"name":"Geo Thermal Elec","color":1},
           {"kwhd":total_geothermal_heat*scl,"name":"Geo Thermal Heat","color":1},
           {"kwhd":total_nuclear_supply*scl,"name":"Nuclear","color":1},
-          {"kwhd":total_biomass_used,"name":"Biomass","color":1}
-          //{"kwhd":total_unmet_demand/3650,"name":"Unmet","color":3}
-          
+          {"kwhd":total_biomass_used,"name":"Biomass","color":1},
+          {"kwhd":total_ambient_heat_supply*scl,"name":"Ambient","color":1},
+          {"kwhd":total_unmet_demand*scl,"name":"Unmet","color":3}
         ]
       },
       
@@ -990,8 +1066,8 @@ function fullzcb_run()
         "stack":[
           {"kwhd":total_traditional_elec*scl,"name":"Trad Elec","color":0},
           {"kwhd":total_space_heat_demand*scl,"name":"Space & Water","color":0},
-          {"kwhd":BEV_demand+electrains_demand,"name":"Electric Transport","color":0},
-          {"kwhd":transport_H2_demand,"name":"Hydrogen Transport","color":0},
+          {"kwhd":(total_EV_dumb_charge+total_elec_trains_demand)*scl,"name":"Electric Transport","color":0},
+          {"kwhd":total_hydrogen_for_hydrogen_vehicles*scl,"name":"Hydrogen Transport","color":0},
           {"kwhd":transport_CH4_demand,"name":"Methane Transport","color":0},
           {"kwhd":transport_biofuels_demand,"name":"Biofuel Transport","color":0},
           {"kwhd":transport_kerosene_demand,"name":"Aviation","color":0},
@@ -1005,7 +1081,9 @@ function fullzcb_run()
           {"kwhd":total_electrolysis_losses*scl,"name":"H2 losses","color":2},
           {"kwhd":total_CCGT_losses*scl,"name":"CCGT losses","color":2},
           {"kwhd":total_FT_losses*scl,"name":"FT losses","color":2},
-          {"kwhd":total_sabatier_losses*scl,"name":"Sabatier losses","color":2},/*
+          {"kwhd":total_sabatier_losses*scl,"name":"Sabatier losses","color":2},
+          {"kwhd":total_spill*scl,"name":"Total spill","color":2},
+          /*
           {"kwhd":total_direct_gas_losses/3650,"name":"Direct gas loss","color":2},
           {"kwhd":total_direct_liquid_losses/3650,"name":"Direct liquid loss","color":2},
 
