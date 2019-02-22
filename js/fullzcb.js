@@ -720,13 +720,14 @@ function fullzcb_run()
         // ---------------------------------------------------------------------------- 
         electricity_from_dispatchable = 0       
         if (balance_after_storage<0) electricity_from_dispatchable = -balance_after_storage
-        if (electricity_from_dispatchable>dispatch_gen_cap) electricity_from_dispatchable = dispatch_gen_cap
+
         if (electricity_from_dispatchable>(methane_SOC*dispatchable_gen_eff)) electricity_from_dispatchable = methane_SOC*dispatchable_gen_eff
-        
+        if (electricity_from_dispatchable>dispatch_gen_cap) electricity_from_dispatchable = dispatch_gen_cap
+                
         balance_after_electrolysis_and_dispatchable = balance_after_storage - electricity_for_electrolysis + electricity_from_dispatchable
         s5_final_balance.push(balance_after_electrolysis_and_dispatchable)
         total_electricity_from_dispatchable += electricity_from_dispatchable
-        if (electricity_from_dispatchable>max_dispatchable_capacity) max_dispatchable_capacity += electricity_from_dispatchable // records max used capacity
+        if (electricity_from_dispatchable>max_dispatchable_capacity) max_dispatchable_capacity = electricity_from_dispatchable // records max used capacity
         
         data.electricity_from_dispatchable.push([time,electricity_from_dispatchable])
         
