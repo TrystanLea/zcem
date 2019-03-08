@@ -1,62 +1,213 @@
-<h2>Storage algorithm</h2>
+<style>
+h3 { 
+    color:#0699fa;
+    margin:0px;
+}
 
-Supply:
-<select id="storage_algorithm_gen_type" autocomplete="off">
-    <option value=0 selected="selected">Onshore wind</option>
-    <option value=1>Offshore wind</option>
-    <option value=2>Wave power</option>
-    <option value=3>Tidal power</option>
-    <option value=4>Solar power</option>
-</select>
+hr {
+    background: #0699fa;
+    border: 0; height: 1px; 
+    margin-top:8px;
+    margin-bottom:8px;
+}
 
-Oversupply:
-<select id="storage_algorithm_oversupply" autocomplete="off">
-    <option value=1.0 selected="selected">100%</option>
-    <option value=1.1>110%</option>
-    <option value=1.2>120%</option>
-    <option value=1.3>130%</option>
-    <option value=1.4>140%</option>
-    <option value=1.5>150%</option>
-</select>
+table {
+    width:auto
+}
 
-View:
-<button id="pan-left"><</button>
-<button id="pan-right">></button>
-<button id="zoom-out">-</button>
-<button id="zoom-in">+</button>
-<button id="reset">reset</button>
+table th {
+    text-align:left;
+    border: 0px solid #ddd;
+    padding:6px 13px;
+}
 
-<br><br>
+table td {
+    text-align:left;
+    border: 0px solid #ddd;
+    padding:6px 13px;
+}
 
-Store type:
-<select id="storage_algorithm_store_type" autocomplete="off">
-    <option value="nostore">No storage</option>
-    <option value="basic">Basic, flat out</option>
-    <option value="basicSOC">Slow charge at high SOC, slow discharge at low SOC</option>
-    <option value="forecast">forecast</option>
-    <option value="average">Proportional: average</option>
-    <option value="average_8h_sum">Proportional: average and forward sum</option>
-</select>
+.box {
+    width:100%;
+    background-color:rgba(68,179,226,0.1);
+    margin-right:20px;
+    margin-bottom:20px;
+}
 
-<table style="margin-top:10px"><tr><td>
-  Store capacity (kWh):
-  <input class="modelinput" key="store_cap" type="text" style="width:100px" value="" autocomplete="off"/>
-</td>
-<td>
-  Average or forecast length:
-  <select id="average_length" autocomplete="off">
-      <option value="12">+-12h</option>
-      <option value="24">+-24h</option>
-      <option value="48">+-2days</option>
-      <option value="96">+-4days</option>
-      <option value="168">+-7days</option>
-  </select>
-</td></tr></table>
+.inner {
+    padding:20px;
+    color:#333;
+    display:none;
+}
 
-<div id="placeholder_bound" style="width:100%">
-    <div id="placeholder"></div>
+.box-title {
+    background-color:rgba(68,179,226,1.0);
+    padding:10px;
+    color:#fff;
+    cursor:pointer;
+}
+
+.icon-expand {
+    width:12px; 
+    margin-right:10px;
+    margin-top:2px;
+}
+    
+</style>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>STORAGE ALGORITHM</b></div>
+    <div class="inner" style="display:block">
+        View:
+        <button id="pan-left"><</button>
+        <button id="pan-right">></button>
+        <button id="zoom-out">-</button>
+        <button id="zoom-in">+</button>
+        <button id="reset">reset</button>
+        <button class="viewmode" view="">Hourly</button>
+        <button class="viewmode" view="backup">Backup Histogram</button>
+        
+        <div id="placeholder_bound" style="width:100%">
+            <div id="placeholder"></div>
+        </div>
+        
+        <div id="graph_notes"></div>
+    </div>
 </div>
 
-<pre id="out" style="font-size:16px; line-height:28px"></pre>
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SUPPLY</b></div>
+    <div class="inner" style="display:block">
 
-<button class="view-source">View source code</button>
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Onshore wind</td>
+            <td>
+              <input class="modelinput" key="onshorewind_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_onshore_wind_supply" type="10y"></span>
+            </td>
+            
+            <td>Offshore wind</td>
+            <td><input class="modelinput" key="offshorewind_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_offshore_wind_supply" type="10y"></span>
+            </td>
+            
+            <td>Solar</td>
+            <td><input class="modelinput" key="solarpv_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_solar_supply" type="10y"></span>
+            </td>
+        </tr>
+        <tr>
+            <td>Hydro</td>
+            <td><input class="modelinput" key="hydro_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_hydro_supply" type="10y"></span>
+            </td>
+            
+            <td>Wave</td>
+            <td><input class="modelinput" key="wave_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_wave_supply" type="10y"></span>
+            </td>
+            
+            <td>Tidal</td>
+            <td><input class="modelinput" key="tidal_capacity" type="text" style="width:70px" value="" autocomplete="off"/>
+              <span style="font-size:12px" class="modeloutput" key="total_tidal_supply" type="10y"></span>
+            </td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>STORE & BACKUP</b></div>
+    <div class="inner" style="display:block">
+
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Store algorithm:</td>
+            <td>
+                <select class="modelinput" key="store_type" autocomplete="off">
+                    <option value="nostore">No storage</option>
+                    <option value="basic">Basic, flat out</option>
+                    <option value="basicSOC">Slow charge at high SOC, slow discharge at low SOC</option>
+                    <option value="forecast">forecast</option>
+                    <option value="average">Proportional: average</option>
+                    <option value="average_8h_sum">Proportional: average and forward sum</option>
+                </select>
+            </td>
+        </tr>
+        </tr>
+            <td>Store capacity (kWh)</td>
+            <td><input class="modelinput" key="store_cap" type="text" style="width:100px" value="" autocomplete="off"/></td>
+        </tr>
+        </tr>
+            <td>Average or forecast length:</td>
+            <td>
+                <select class="modelinput" key="average_length" autocomplete="off">
+                    <option value="12">+-12h</option>
+                    <option value="24">+-24h</option>
+                    <option value="48">+-2days</option>
+                    <option value="96">+-4days</option>
+                    <option value="168">+-7days</option>
+                </select>
+            </td>
+        </tr>
+        </tr>
+            <td>Backup capacity (kW)</td>
+            <td><input class="modelinput" key="backup_capacity" type="text" style="width:100px" value="" autocomplete="off"/></td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>RESULTS</b></div>
+    <div class="inner" style="display:block">
+
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Percentage of demand supplied directly:</td>
+            <td><span class="modeloutput" key="prc_demand_supplied_direct"></span></td>
+        </tr>
+        <tr>
+            <td>Percentage of demand supplied after store:</td>
+            <td><span class="modeloutput" key="prc_demand_supplied_store"></span></td>
+        </tr>
+        <tr>
+            <td>Percentage of demand supplied after backup:</td>
+            <td><span class="modeloutput" key="prc_demand_supplied_backup"></span></td>
+        </tr>
+        <tr>
+            <td>Percentage of unmet demand:</td>
+            <td><span class="modeloutput" key="prc_demand_unmet"></span></td>
+        </tr>
+        <tr>
+            <td>Percentage of time supply was more or the same as the demand:</td>
+            <td><span class="modeloutput" key="prc_time_met"></span></td>
+        </tr>
+        <tr>
+            <td>Total supply:</td>
+            <td><span class="modeloutput" key="total_supply"></span> kWh/y</td>
+        </tr>
+        <tr>
+            <td>Total demand:</td>
+            <td><span class="modeloutput" key="total_demand"></span> kWh/y</td>
+        </tr>
+        <tr>
+            <td>Total backup:</td>
+            <td><span class="modeloutput" key="total_backup"></span> kWh/y</td>
+        </tr>
+        <tr>
+            <td>Total unmet:</td>
+            <td><span class="modeloutput" key="total_unmet"></span> kWh/y</td>
+        </tr>
+        <tr>
+            <td>Total excess:</td>
+            <td><span class="modeloutput" key="total_excess"></span> kWh/y</td>
+        </tr>
+        <tr>
+            <td>Max backup capacity used:</td>
+            <td><span class="modeloutput" key="backup_capacity_used"></span></td>
+        </tr>
+        </table>
+    </div>
+</div>
