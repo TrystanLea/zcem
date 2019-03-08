@@ -31,7 +31,7 @@ body {
 @media (min-width: 925px) and (max-width: 1360px) {
     #menu {
         padding:20px;
-        width:150px;
+        width:200px;
         float:left;
     }
 
@@ -52,7 +52,7 @@ body {
     #menu {
         float:left;
         padding:20px;
-        width:150px;
+        width:200px;
     }
 
     #model-bound {
@@ -125,7 +125,7 @@ ul {
 
 ul li a {
     padding: 10px 0px;
-    width:150px;
+    width:200px;
     display: block;
     float:left;
     color:#888;

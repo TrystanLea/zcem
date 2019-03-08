@@ -1,0 +1,629 @@
+<style>
+h3 { 
+    color:#0699fa;
+    margin:0px;
+}
+
+hr {
+    background: #0699fa;
+    border: 0; height: 1px; 
+    margin-top:8px;
+    margin-bottom:8px;
+}
+
+table {
+    width:auto
+}
+
+table th {
+    text-align:left;
+    border: 0px solid #ddd;
+    padding:6px 13px;
+}
+
+table td {
+    text-align:left;
+    border: 0px solid #ddd;
+    padding:6px 13px;
+}
+
+.box {
+    width:100%;
+    background-color:rgba(68,179,226,0.1);
+    margin-right:20px;
+    margin-bottom:20px;
+}
+
+.inner {
+    padding:20px;
+    color:#333;
+    display:none;
+}
+
+.box-title {
+    background-color:rgba(68,179,226,1.0);
+    padding:10px;
+    color:#fff;
+    cursor:pointer;
+}
+
+.icon-expand {
+    width:12px; 
+    margin-right:10px;
+    margin-top:2px;
+}
+    
+</style>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>ZERO CARBON BRITAIN HOURLY MODEL v2</b></div>
+    <div class="inner" style="display:block">
+        View:
+        <button id="pan-left"><</button>
+        <button id="pan-right">></button>
+        <button id="zoom-out">-</button>
+        <button id="zoom-in">+</button>
+        <button id="reset">reset</button>
+        <button class="viewmode" view="">Electricity Balance</button>
+        <button class="viewmode" view="stores">Stores</button>
+        <button class="viewmode" view="backup">Backup</button>
+        
+        <div id="placeholder_bound" style="width:100%">
+            <div id="placeholder"></div>
+        </div>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>OVERVIEW<!--<span style="float:right" class="modeloutput" key="total_supply" type="10y"></span>--></b></div>
+    <div class="inner" style="display:block">
+
+        <table class="table" style="width:100%">
+        <tr>
+            <th></th>
+            <th>hours</th>
+            <th>percent</th>
+            <th>TWh/yr</th>
+        </tr>
+        <tr>
+            <td>Total hours of simulation</td>
+            <td><span class="modeloutput" key="hours"></span></td>
+            <td>100%</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Initial el. balance positive</td>
+            <td><span class="modeloutput" key="initial_elec_balance_positive"></span></td>
+            <td><span class="modeloutput" key="initial_elec_balance_positive_prc" dp=1 units="%"></span></td>
+            <td><span class="modeloutput" key="total_initial_elec_balance_positive" dp=1></span></td>
+        </tr>
+        <tr>
+            <td>Final el. balance negative</td>
+            <td><span class="modeloutput" key="final_elec_balance_negative"></span></td>
+            <td><span class="modeloutput" key="final_elec_balance_negative_prc" dp=1 units="%"></span></td>
+            <td><span class="modeloutput" key="total_final_elec_balance_negative" dp=3></span></td>
+        </tr>
+        <tr>
+            <td>Final el. balance positive</td>
+            <td><span class="modeloutput" key="final_elec_balance_positive"></span></td>
+            <td><span class="modeloutput" key="final_elec_balance_positive_prc" dp=1 units="%"></span></td>
+            <td><span class="modeloutput" key="total_final_elec_balance_positive"dp=1></span></td>
+        </tr>
+        <tr>
+            <td>Unmet heat demand</td>
+            <td><span class="modeloutput" key="unmet_heat_demand_count"></span></td>
+            <td><span class="modeloutput" key="unmet_heat_demand_prc" dp=1 units="%"></span></td>
+            <td><span class="modeloutput" key="total_unmet_heat_demand" dp=1></span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Methane store empty</td>
+            <td><span class="modeloutput" key="methane_store_empty_count"></span></td>
+            <td><span class="modeloutput" key="methane_store_empty_prc" dp=1 units="%"></span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Methane store full</td>
+            <td><span class="modeloutput" key="methane_store_full_count"></span></td>
+            <td><span class="modeloutput" key="methane_store_full_prc" dp=1 units="%"></span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Hydrogen store empty</td>
+            <td><span class="modeloutput" key="hydrogen_store_empty_count"></span></td>
+            <td><span class="modeloutput" key="hydrogen_store_empty_prc" dp=1 units="%"></span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Hydrogen store full</td>
+            <td><span class="modeloutput" key="hydrogen_store_full_count"></span></td>
+            <td><span class="modeloutput" key="hydrogen_store_full_prc" dp=1 units="%"></span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <th></th>
+            <th>TWh/yr</th>
+            <th>% diff</th>
+            <th></th>
+        </tr>
+        <tr>
+            <td>Liquid fuel produced</td>
+            <td><span class="modeloutput" key="total_synth_fuel_produced"></span></td>
+            <td><span class="modeloutput" key="liquid_fuel_produced_prc_diff" dp=1 units="%"></span></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Biogas energy</td>
+            <td><span class="modeloutput" key="total_methane_made" dp=1></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Biomass energy syn fuel</td>
+            <td><span class="modeloutput" key="total_synth_fuel_biomass_used" dp=1></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>All input biomass energy</td>
+            <td><span class="modeloutput" key="total_biomass_used" dp=1></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Electricity from dispatchable (TWh)</td>
+            <td><span class="modeloutput" key="total_electricity_from_dispatchable" dp=1></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Electricity from dispatchable (GW)</td>
+            <td><span class="modeloutput" key="max_dispatchable_capacity" dp=1></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SUPPLY<!--<span style="float:right" class="modeloutput" key="total_supply" type="10y"></span>--></b></div>
+    <div class="inner">
+
+        <table class="table" style="width:100%">
+        <tr>
+            <th></th>
+            <th>GW cap.</th>
+            <th>TWh/yr</th>
+            <th>CF</th>
+            <th>availability</th>
+        </tr>
+        <tr>
+            <td>Offshore wind</td>
+            <td><input class="modelinput" key="offshore_wind_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_offshore_wind_supply" type="10y"></span></td>
+            <td></td>
+            <td><input class="modelinput" key="offshore_wind_availability" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Onshore wind</td>
+            <td><input class="modelinput" key="onshore_wind_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_onshore_wind_supply" type="10y"></span></td>
+            <td></td>
+            <td><input class="modelinput" key="onshore_wind_availability" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Wave</td>
+            <td><input class="modelinput" key="wave_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_wave_supply" type="10y"></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Tidal (range + stream)</td>
+            <td><input class="modelinput" key="tidal_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_tidal_supply" type="10y"></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Hydro</td>
+            <td><input class="modelinput" key="hydro_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_hydro_supply" type="10y"></span></td>
+            <td><input class="modelinput" key="hydro_cf" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Solar PV</td>
+            <td><input class="modelinput" key="solarpv_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_solar_supply" type="10y"></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Solar Thermal (heat)</td>
+            <td><input class="modelinput" key="solarthermal_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_solarthermal" type="10y"></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Geo Thermal Electricity</td>
+            <td><input class="modelinput" key="geothermal_elec_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_geothermal_elec" type="10y"></span></td>
+            <td><input class="modelinput" key="geothermal_elec_cf" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Geo Thermal Heat</td>
+            <td><input class="modelinput" key="geothermal_heat_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_geothermal_heat" type="10y"></span></td>
+            <td><input class="modelinput" key="geothermal_heat_cf" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td></td>
+        </tr>   
+        <tr>
+            <td>Nuclear</td>
+            <td><input class="modelinput" key="nuclear_capacity" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td><span class="modeloutput" key="total_nuclear_supply" type="10y"></span></td>
+            <td></td>
+            <td><input class="modelinput" key="nuclear_availability" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Grid loss</td>
+            <td><input class="modelinput" key="grid_loss_prc" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+            <td>Biomass for biogas</td>
+            <td></td>
+            <td><input class="modelinput" key="biomass_for_biogas" type="text" style="width:70px" value="" autocomplete="off" dp=1 /></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </tr>
+            <td>Biomass for space/water heat</td>
+            <td></td>
+            <td><span class="modeloutput" key="biomass_for_spacewater_heat" type="10y"></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </tr>
+            <td>Biomass for industrial CHP</td>
+            <td></td>
+            <td><span class="modeloutput" key="biomass_for_industry_CHP" type="10y"></span></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </tr>
+            <td>Anaerobic digestion efficiency</td>
+            <td><input class="modelinput" key="anaerobic_digestion_efficiency" type="text" style="width:70px" value="" autocomplete="off"/></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </tr>
+            <td>Gas balance</td>
+            <td><span class="modeloutput" key="gas_balance" type="10y"></span></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>STORAGE & BACKUP</b></div>
+    <div class="inner">
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Dispatchable generating capacity</td>
+            <td><input class="modelinput" key="dispatch_gen_cap" type="text" style="width:70px" value="" autocomplete="off"/> GW</td>
+        </tr>
+        <tr>
+            <td>Dispatchable generation efficiency</td>
+            <td><input class="modelinput" key="dispatchable_gen_eff" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Electrolysis capacity</td>
+            <td><input class="modelinput" key="electrolysis_cap" type="text" style="width:70px" value="" autocomplete="off"/> GW</td>
+        </tr>
+        <tr>
+            <td>Electrolysis efficiency</td>
+            <td><input class="modelinput" key="electrolysis_eff" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Methanation capacity (max. Rate)</td>
+            <td><input class="modelinput" key="methanation_capacity" type="text" style="width:70px" value="" autocomplete="off"/> GW</td>
+        </tr>
+        <tr>
+            <td>Methanation efficiency (H2->CH4)</td>
+            <td><input class="modelinput" key="methanation_efficiency" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Methanation raw biogas to H2 ratio</td>
+            <td><input class="modelinput" key="methanation_raw_biogas_to_H2_ratio" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Methane storage capacity</td>
+            <td><input class="modelinput" key="methane_store_capacity" type="text" style="width:70px" value="" autocomplete="off"/> GWh chem</td>
+        </tr>
+        <tr>
+            <td>Hydrogen storage capacity</td>
+            <td><input class="modelinput" key="hydrogen_storage_cap" type="text" style="width:70px" value="" autocomplete="off"/> GWh chem</td>
+        </tr>
+        <tr>
+            <td>Lower H2 store limit for H2->CH4</td>
+            <td><input class="modelinput" key="minimum_hydrogen_store_level" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td>Generic energy store capacity</td>
+            <td><input class="modelinput" key="elec_store_storage_cap" type="text" style="width:70px" value="" autocomplete="off"/> GWh</td>
+        </tr>
+        <tr>
+            <td>Generic energy store rate of charge</td>
+            <td><input class="modelinput" key="elec_store_charge_cap" type="text" style="width:70px" value="" autocomplete="off"/> GWh</td>
+        </tr>
+        <tr>
+            <td>Enable electricity storage?</td>
+            <td><input class="modelinput" key="electricity_storage_enabled" type="text" style="width:70px" value="" autocomplete="off"/> GWh</td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>TRANSPORT</b></div>
+    <div class="inner">
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Battery EV (BEV) electr. demand</td>
+            <td><input class="modelinput" key="BEV_demand" type="text" style="width:70px" value="" autocomplete="off"/> TWh/yr</td>
+        </tr>
+        <tr>
+            <td>Trains electricity demand</td>
+            <td><input class="modelinput" key="electrains_demand" type="text" style="width:70px" value="" autocomplete="off"/> TWh/yr</td>
+        </tr>
+        <tr>
+            <td>Transport hydrogen demand</td>
+            <td><input class="modelinput" key="transport_H2_demand" type="text" style="width:70px" value="" autocomplete="off"/> TWh/yr</td>
+        </tr>
+        <tr>
+            <td>Transport methane demand</td>
+            <td><input class="modelinput" key="transport_CH4_demand" type="text" style="width:70px" value="" autocomplete="off"/> TWh/yr</td>
+        </tr>
+        <tr>
+            <td>Transport biofuels demand</td>
+            <td><input class="modelinput" key="transport_biofuels_demand" type="text" style="width:70px" value="" autocomplete="off"/> TWh/yr</td>
+        </tr>
+        <tr>
+            <td>Transport kerosene demand</td>
+            <td><input class="modelinput" key="transport_kerosene_demand" type="text" style="width:70px" value="" autocomplete="off"/> TWh/yr</td>
+        </tr>
+        <tr>
+            <td>Total bioliquid demand</td>
+            <td><span class="modeloutput" key="transport_bioliquid_demand" dp=1></span> TWh/yr</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Total useable EV battery capacity</td>
+            <td><input class="modelinput" key="electric_car_battery_capacity" type="text" style="width:70px" value="" autocomplete="off"/> GWh</td>
+        </tr>
+        <tr>
+            <td>Maximum rate of charge</td>
+            <td><input class="modelinput" key="electric_car_max_charge_rate" type="text" style="width:70px" value="" autocomplete="off"/> GWh</td>
+        </tr>
+        <tr>
+            <td>Enable smart charging?</td>
+            <td><input class="modelinput" key="smart_charging_enabled" type="text" style="width:70px" value="" autocomplete="off"/></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FT process: biomass required</td>
+            <td><input class="modelinput" key="FT_process_biomass_req" type="text" style="width:70px" value="" autocomplete="off"/> GWh/GWh fuel</td>
+        </tr>
+        <tr>
+            <td>FT process: hydrogen required</td>
+            <td><input class="modelinput" key="FT_process_hydrogen_req" type="text" style="width:70px" value="" autocomplete="off"/> GWh/GWh fuel</td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>ELECTRICITY DEMAND</b></div>
+    <div class="inner">
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Change in "traditional" electricity</td>
+            <td>-<input class="modelinput" key="prc_reduction_traditional_demand" type="text" style="width:70px" value="" autocomplete="off" dp=0 />%</td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>SPACE / WATER HEAT DEMAND</b></div>
+    <div class="inner">
+        <table class="table" style="width:100%">
+        <tr>
+            <td>Specific space heat demand</td>
+            <td><input class="modelinput" key="specific_space_heat_demand" type="text" style="width:70px" value="" autocomplete="off" /> GW/K</td>
+        </tr>
+        <tr>
+            <td>Space heat base temperature</td>
+            <td><input class="modelinput" key="space_heat_base_temperature" type="text" style="width:70px" value="" autocomplete="off" /> K</td>
+        </tr>
+        <tr>
+            <td>Water heating</td>
+            <td><input class="modelinput" key="water_heating" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </tr>      
+        <tr>
+            <th></th>
+            <th>Heatpumps</th>
+            <th>Elec. resist.</th>
+            <th>Biomass boiler</th>
+            <th>Gas boiler</th>
+        </tr>
+        <tr>
+            <td>Space & water heating share (%)</td>
+            <td><input class="modelinput" key="spacewater_share_heatpumps" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+            <td><input class="modelinput" key="spacewater_share_elres" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+            <td><input class="modelinput" key="spacewater_share_biomass" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+            <td><input class="modelinput" key="spacewater_share_methane" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+        </tr>
+        <tr>
+            <td>Efficiency (%)</td>
+            <td><input class="modelinput" key="heatpump_COP" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+            <td><input class="modelinput" key="elres_efficiency" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+            <td><input class="modelinput" key="biomass_efficiency" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+            <td><input class="modelinput" key="methane_boiler_efficiency" type="text" style="width:70px" value="" autocomplete="off" itype="%" /></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Heat store storage capacity</td>
+            <td><input class="modelinput" key="heatstore_storage_cap" type="text" style="width:70px" value="" autocomplete="off" /> GWh therm</td>
+        </tr>
+        <tr>
+            <td>Heat store charging capacity</td>
+            <td><input class="modelinput" key="heatstore_charge_cap" type="text" style="width:70px" value="" autocomplete="off" /> GW therm</td>
+        </tr>
+        <tr>
+            <td>Heat storage enabled?</td>
+            <td><input class="modelinput" key="heatstore_enabled" type="text" style="width:70px" value="" autocomplete="off" /></td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+<div class="box">
+    <div class="box-title"><img class="icon-expand" src="img/expand.png"><b>INDUSTRIAL (& cooking) FUEL INPUTS</b></div>
+    <div class="inner">
+        <table class="table" style="width:100%">
+        <tr>
+          <th></th>
+          <th>Electricity<br>(TWh/yr)</th>
+          <th>Biogas direct<br>(TWh/yr)</th>
+          <th>Biomass direct<br>(TWh/yr)</th>
+          <th>Biogas CHP<br>(TWh/yr)</th>
+          <th>Biomass CHP<br>(TWh/yr)</th>
+          <th>Total</th>
+        <tr>
+            <td>Cooking/catering</td>
+            <td><input class="modelinput" key="annual_cooking_elec" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_cooking_biogas" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_cooking_biomass" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_cooking_biogas_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_cooking_biomass_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+        </tr>
+        <tr>
+            <td>High temp process</td>
+            <td><input class="modelinput" key="annual_high_temp_process_elec" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_high_temp_process_biogas" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_high_temp_process_biomass" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_high_temp_process_biogas_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_high_temp_process_biomass_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+        </tr>
+        <tr>
+            <td>Low temp drying & separation</td>
+            <td><input class="modelinput" key="annual_low_temp_dry_sep_elec" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_low_temp_dry_sep_biogas" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_low_temp_dry_sep_biomass" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_low_temp_dry_sep_biogas_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_low_temp_dry_sep_biomass_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+        </tr>
+        <tr>
+            <td>Non heat process</td>
+            <td><input class="modelinput" key="annual_non_heat_process_elec" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_non_heat_process_biogas" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_non_heat_process_biomass" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_non_heat_process_biogas_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_non_heat_process_biomass_CHP" type="text" style="width:70px" value="" autocomplete="off" /></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Industrial biofuel</td>
+            <td><input class="modelinput" key="industrial_biofuel" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        </table>
+    </div>
+</div>
+
+
+<div class="box">
+    <div class="box-title">
+        <img class="icon-expand" src="img/expand.png"><b>FINAL SUPPLY DEMAND MATCHING
+        <span style="float:right" class="modeloutput" key="prc_demand_supplied_all" dp=3 scale=1 units="%"></span>
+        </b>
+    </div>
+    <div class="inner" style="display:block">
+
+        <div id="stacks_bound" style="width:450; height:530; float:left;">
+            <canvas id="stacks" width="450" height="530"></canvas>
+        </div>
+        
+        <div style="float:left; width:35%;">
+            <p style="font-size:18px">Total supply: <span class="modeloutput" key="total_supply" type="10y"></span></p>
+            <p style="font-size:18px">Total demand: <span class="modeloutput" key="total_demand" type="10y"></span></p>
+            <p style="font-size:18px">Primary energy factor: <span class="modeloutput" key="primary_energy_factor" dp=2 scale=1 units=""></span></p>
+            <p style="font-size:18px">Exess generation: <span class="modeloutput" key="total_exess" type="10y"></span></p>
+            <p style="font-size:18px">Unmet demand: <span class="modeloutput" key="total_unmet_demand" type="10y"></span></p>
+        </div>
+        
+        <div style="clear:both"></div>
+    </div>
+</div>
+
+<p><b>Tests (error)</b><br>
+<div id="tests"></div></p>
+<p><b>Detailed results</b><br>
+<pre id="out" style="font-size:16px; line-height:28px"></pre></p>
