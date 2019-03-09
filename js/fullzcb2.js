@@ -56,7 +56,7 @@ function fullzcb2_init()
     spacewater_share_methane = 0.00
     
     // Heatstore
-    heatstore_enabled = true
+    heatstore_enabled = 1
     heatstore_storage_cap = 100.0
     heatstore_charge_cap = 50.0
     
@@ -97,7 +97,7 @@ function fullzcb2_init()
     
     electric_car_battery_capacity = 294.75    // GWh
     electric_car_max_charge_rate = 42.11      // GW
-    smart_charging_enabled = true
+    smart_charging_enabled = 1
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
     biomass_for_biogas = 94.0
@@ -106,7 +106,7 @@ function fullzcb2_init()
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
     
     // 
-    electricity_storage_enabled = true
+    electricity_storage_enabled = 1
     elec_store_storage_cap = 50.0
     elec_store_charge_cap = 10.0
     
@@ -166,7 +166,7 @@ function fullzcb2_run()
     hydrogen_SOC = hydrogen_SOC_start
     methane_SOC = methane_SOC_start
     
-    total_EV_dumb_charge = 0
+    total_EV_charge = 0
     total_elec_trains_demand = 0
     
     initial_elec_balance_positive = 0
@@ -289,11 +289,14 @@ function fullzcb2_run()
         hydrogen_SOC: [],
         methane_SOC: [],
         electricity_from_dispatchable: [],
+        elec_store_charge: [],
         elec_store_discharge: [],
         EV_smart_discharge: [],
         EV_charge: [],
+        EL_transport: [],
         electricity_for_electrolysis: [],
-        export_elec:[]
+        export_elec:[],
+        unmet_elec:[]
     }
     
     // move to hourly model if needed
@@ -354,7 +357,6 @@ function fullzcb2_run()
         // supply after losses
         supply = electricity_supply * (1.0-grid_loss_prc)
         data.s1_total_variable_supply.push([time,supply])
-        
         // total losses
         total_grid_losses += electricity_supply - supply
 
@@ -364,7 +366,6 @@ function fullzcb2_run()
         traditional_elec_demand = capacityfactors[5] * change_traditional_demand
         data.s1_traditional_elec_demand.push([time,traditional_elec_demand])
         total_traditional_elec += traditional_elec_demand
-        
         // ---------------------------------------------------------------------------
         // Space & Water Heat part 1
         // ---------------------------------------------------------------------------
@@ -440,38 +441,41 @@ function fullzcb2_run()
             }
         }
         
-        heat_store_charge_GWth = 0
-        if (s2_deviation_from_mean_GWth[hour]>0) {
+        // If the balance from the previous section is negative
+        // we have surplus heat supply e.g solar thermal, geothermal etc.
+        spacewater_demand = 0.0
+        spacewater_surplus = 0.0
+        spacewater_balance = s1_spacewater_demand_before_heatstore[hour]
+        if (spacewater_balance>=0.0) {
+            spacewater_demand = spacewater_balance 
+        } else {
+            spacewater_surplus = -spacewater_balance
+        }
+        
+        heat_store_charge_GWth = 0.0
+        heat_store_discharge_GWth = 0.0
+        
+        if (s2_deviation_from_mean_GWth[hour]>=0.0) {
             heat_store_charge_GWth = (heatstore_storage_cap-heatstore_SOC)*(s2_deviation_from_mean_GWth[hour]/sum_pos)
             if (heat_store_charge_GWth>heatstore_charge_cap) heat_store_charge_GWth = heatstore_charge_cap                                      // limit by charge capacity
-        }
-
-        heat_store_discharge_GWth = 0
-        if (s2_deviation_from_mean_GWth[hour]<0) {
-            spacewater_demand_before_heatstore = s1_spacewater_demand_before_heatstore[hour]
-            if (spacewater_demand_before_heatstore<0) spacewater_demand_before_heatstore = 0
-            
-            heat_store_discharge_GWth = spacewater_demand_before_heatstore * (s2_deviation_from_mean_GWth[hour]/sum_neg)
-            if (heat_store_discharge_GWth>spacewater_demand_before_heatstore) heat_store_discharge_GWth = spacewater_demand_before_heatstore    // limit discharge by demand
+        } else {
+            heat_store_discharge_GWth = spacewater_demand * (s2_deviation_from_mean_GWth[hour]/sum_neg)
+            if (heat_store_discharge_GWth>spacewater_demand) heat_store_discharge_GWth = spacewater_demand                                      // limit discharge by demand
             if (heat_store_discharge_GWth>heatstore_charge_cap) heat_store_discharge_GWth = heatstore_charge_cap                                // limit by max discharge capacity
             if (heat_store_discharge_GWth>heatstore_SOC) heat_store_discharge_GWth = heatstore_SOC                                              // limit by available SOC        
         }
         
-        heatstore_change = 0
+        heat_spill = 0.0
+        heatstore_change = 0.0
         if (heatstore_enabled) {
-            if (s1_spacewater_demand_before_heatstore[hour]>0) {
+            if (spacewater_balance>=0.0) {
                 heatstore_change = heat_store_charge_GWth - heat_store_discharge_GWth
             } else {
-                heatstore_change = heatstore_storage_cap - heatstore_SOC
-                if (-1*s1_spacewater_demand_before_heatstore[hour]<heatstore_change) heatstore_change = -1*s1_spacewater_demand_before_heatstore[hour]
+                // This overwrites potential heat charging from the section above, needs looking at
+                heatstore_change = spacewater_surplus                                                                                           // Charge heat store with surplus
+                if ((heatstore_SOC+heatstore_change)>heatstore_storage_cap) heatstore_change = heatstore_storage_cap - heatstore_SOC            // Limit to available store
+                heat_spill = spacewater_surplus - heatstore_change
             }
-        }
-        
-        if (s1_spacewater_demand_before_heatstore[hour]>0) {
-            heat_spill = 0
-        } else {
-            heat_spill = -1*s1_spacewater_demand_before_heatstore[hour] - heatstore_change
-            if (heat_spill<0) heat_spill = 0
         }
         
         s3_heatstore_SOC.push(heatstore_SOC)
@@ -480,8 +484,8 @@ function fullzcb2_run()
         total_heat_spill += heat_spill
                 
         // space & water heat tab
-        spacewater_demand_after_heatstore = s1_spacewater_demand_before_heatstore[hour] + heatstore_change
-        if (spacewater_demand_after_heatstore<0) spacewater_demand_after_heatstore = 0
+        spacewater_demand_after_heatstore = spacewater_balance + heatstore_change
+        if (spacewater_demand_after_heatstore<0.0) spacewater_demand_after_heatstore = 0.0
         
         // electric resistance
         heat_from_elres = spacewater_demand_after_heatstore * spacewater_share_elres
@@ -516,10 +520,6 @@ function fullzcb2_run()
         s3_spacewater_elec_demand.push(spacewater_elec_demand)
         data.spacewater_elec.push([time,spacewater_elec_demand])
         
-        heatstore_charge = heatstore_change / GWth_GWe
-        if (heatstore_charge<0) heatstore_charge = 0
-        data.heatstore.push([time,heatstore_charge])
-                
         // Balance calculation for BEV storage stage
         s3_balance_before_BEV_storage.push(data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - spacewater_elec_demand)
     }
@@ -593,7 +593,6 @@ function fullzcb2_run()
         
         EV_discharge = BEV_use_profile[hour%24] * daily_BEV_demand
         EV_dumb_charge = BEV_charge_profile[hour%24] * daily_BEV_demand
-        total_EV_dumb_charge += EV_dumb_charge
         
         // +- 12 h average of balance before BEV Storage
         var sum = 0; var n = 0;
@@ -606,45 +605,56 @@ function fullzcb2_run()
         }
         average_12h_balance_before_BEV_storage = sum / n;
         // deviation from mean
-        deviation_from_mean_BEV = s3_balance_before_BEV_storage[hour] - average_12h_balance_before_BEV_storage        
+        balance = s3_balance_before_BEV_storage[hour]
+        deviation_from_mean_BEV = balance - average_12h_balance_before_BEV_storage        
+
+        max_charge_rate = BEV_plugged_in_profile[hour%24] * electric_car_max_charge_rate
+                    
+        EV_smart_charge = 0.0
+        EV_smart_discharge = 0.0
         
-        EV_smart_charge = 0
         if (smart_charging_enabled) {
-            if (deviation_from_mean_BEV>0) {
-                EV_smart_charge = BEV_plugged_in_profile[hour%24] * electric_car_max_charge_rate                                                    // maximum charge rate
-                EV_smart_charge2 = (electric_car_battery_capacity-BEV_Store_SOC)*deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)        // limited by availability forecast
-                if (EV_smart_charge>EV_smart_charge2) EV_smart_charge = EV_smart_charge2                                                            // 
-                if (EV_smart_charge>(electric_car_battery_capacity-BEV_Store_SOC)) EV_smart_charge = electric_car_battery_capacity-BEV_Store_SOC    // LIMIT to max available SOC
-                EV_smart_charge -= EV_dumb_charge
+            if (balance>=0.0) {
+                if (deviation_from_mean_BEV>=0.0) {
+                    EV_smart_charge = (electric_car_battery_capacity-BEV_Store_SOC)*deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)         // limited by availability forecast
+                    if (EV_smart_charge>max_charge_rate) EV_smart_charge = max_charge_rate                                                              // limited by max charge rate
+                    if (EV_smart_charge>(electric_car_battery_capacity-BEV_Store_SOC)) EV_smart_charge = electric_car_battery_capacity-BEV_Store_SOC    // limited to max available SOC
+                    if (EV_smart_charge>balance) EV_smart_charge = balance                                                                              // limited to available balance
+                }
             } else {
-                EV_smart_charge2 = BEV_Store_SOC*-deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)
-                if (EV_smart_charge2>EV_dumb_charge) EV_smart_charge2 = EV_dumb_charge
-                EV_smart_charge = -EV_smart_charge2
+                if (deviation_from_mean_BEV<0.0) {
+                    EV_smart_discharge = BEV_Store_SOC*-deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)
+                    if (EV_smart_discharge>EV_dumb_charge) EV_smart_discharge = EV_dumb_charge
+                    if (EV_smart_discharge>-balance) EV_smart_discharge = -balance
+                    if (EV_smart_discharge>BEV_Store_SOC) EV_smart_discharge = BEV_Store_SOC
+                }
             }
         }
         
+        //EV_smart_charge = 0.0
+        //EV_smart_discharge = 0.0
+        
+        EV_charge = EV_smart_charge
+        if (EV_charge<EV_dumb_charge) EV_charge = EV_dumb_charge
+        EV_discharge += EV_smart_discharge
+
+        if ((BEV_Store_SOC+EV_charge)>electric_car_battery_capacity) EV_charge = electric_car_battery_capacity - BEV_Store_SOC
+        
+        data.EV_charge.push([time,EV_charge])
+        data.EV_smart_discharge.push([time,EV_smart_discharge])
+        
+        BEV_Store_SOC += EV_charge - EV_discharge
+
         s4_BEV_Store_SOC.push(BEV_Store_SOC)
         data.BEV_Store_SOC.push([time,BEV_Store_SOC])
+                
+        electricity_for_transport = elec_trains_demand + EV_charge
         
-        EV_charge = EV_dumb_charge
-        EV_smart_discharge = 0
-        if (EV_smart_charge<0) {
-            EV_smart_discharge = EV_smart_charge * -1
-        } else {
-            EV_charge += EV_smart_charge
-        }
+        total_EV_charge += EV_charge
         
-        data.EV_smart_discharge.push([time,EV_smart_discharge])
-        data.EV_charge.push([time,EV_charge])
+        data.EL_transport.push([time,electricity_for_transport])
         
-        change_to_BEV_store = -EV_discharge + EV_dumb_charge + EV_smart_charge
-        BEV_Store_SOC += change_to_BEV_store
-        if (BEV_Store_SOC>electric_car_battery_capacity) BEV_Store_SOC = electric_car_battery_capacity
-        
-        electricity_for_transport = elec_trains_demand + EV_dumb_charge
-        
-        balance_before_storage = data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s3_spacewater_elec_demand[hour] - s1_industrial_elec_demand[hour] - electricity_for_transport
-        balance_before_elec_store = balance_before_storage - EV_smart_charge
+        balance_before_elec_store = data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s3_spacewater_elec_demand[hour] - s1_industrial_elec_demand[hour] - electricity_for_transport
         s4_balance_before_elec_store.push(balance_before_elec_store)
     }
     loading_prc(70,"model stage 4");
@@ -659,153 +669,60 @@ function fullzcb2_run()
     {
         var time = datastarttime + (hour * 3600 * 1000);
         
-        var store_type = "average";
+        var balance = s4_balance_before_elec_store[hour]
         
-        // ---------------------------------------------------------------------------
-        // Proportional SOC store
-        // ---------------------------------------------------------------------------
-        if (store_type == "proportional")
-        {
-            elec_store_charge = 0
-            elec_store_discharge = 0
-            var balance = s4_balance_before_elec_store[hour]
-            if (balance>0) {
-                elec_store_charge = balance * Math.pow((elec_store_storage_cap-elecstore_SOC)/ elec_store_storage_cap,0.3)
-                if (elec_store_charge>elec_store_charge_cap) elec_store_charge = elec_store_charge_cap                  // Limit by max charge rate 
-                if (elec_store_charge>(elec_store_storage_cap-elecstore_SOC)) elec_store_charge = elec_store_storage_cap - elecstore_SOC        // Limit by available SOC
-                elecstore_SOC += elec_store_charge
-                balance -= elec_store_charge
-            } else {
-                elec_store_discharge = -1*balance * Math.pow(elecstore_SOC / elec_store_storage_cap,0.5)
-                if (elec_store_discharge>elec_store_charge_cap) elec_store_discharge = elec_store_charge_cap            // Limit by max discharge rate
-                if (elec_store_discharge>elecstore_SOC) elec_store_discharge = elecstore_SOC                          // Limit by available SOC
-                elecstore_SOC -= elec_store_discharge
-                balance += elec_store_discharge
-            }
-            balance_after_storage = balance
-        }
+        elec_store_charge = 0
+        elec_store_discharge = 0
+        
         // ---------------------------------------------------------------------------
         // 12 h average store implementation
         // ---------------------------------------------------------------------------
-        // +- 12 h average of balance before BEV Storage
-        else if (store_type == "average")
-        {
-            var sum = 0; var n = 0;
-            for (var i=-12; i<12; i++) {
-                var index = hour + i
-                if (index>=hours) index-=hours
-                if (index<0) index += hours
-                sum += s4_balance_before_elec_store[index]
-                n++;
-            }
-            average_12h_balance_before_elec_storage = sum / n;
-            deviation_from_mean_elec = s4_balance_before_elec_store[hour] - average_12h_balance_before_elec_storage
-            
-            elec_store_change = 0
-            if (electricity_storage_enabled) {
-                if (deviation_from_mean_elec>0) {
-                    elec_store_change = (elec_store_storage_cap-elecstore_SOC)*deviation_from_mean_elec/(elec_store_storage_cap*0.5)
-                    if (elec_store_change>(elec_store_storage_cap - elecstore_SOC)) elec_store_change = elec_store_storage_cap - elecstore_SOC   // Limit to available SOC
-                    if (elec_store_change>elec_store_charge_cap) elec_store_change = elec_store_charge_cap                                       // Limit to charge capacity
-                } else {
-                    elec_store_change = elecstore_SOC*-deviation_from_mean_elec/(elec_store_storage_cap*0.5)
-                    if (elec_store_change>elecstore_SOC) elec_store_change = elecstore_SOC                      // Limit to elecstore SOC
-                    if (elec_store_change>elec_store_charge_cap) elec_store_change = elec_store_charge_cap      // Limit to discharge capacity
-                    elec_store_change *= -1                                                                     // invert
-                }
-            }
-            
-            elecstore_SOC += elec_store_change
-            if (elecstore_SOC<0) elecstore_SOC = 0                                                              // limits here can loose energy in the calc
-            if (elecstore_SOC>elec_store_storage_cap) elecstore_SOC = elec_store_storage_cap                    // limits here can loose energy in the calc
-            
-            elec_store_discharge = 0
-            if (elec_store_change<0) {
-                elec_store_discharge = elec_store_change * -1
-            }
-            balance_after_storage = s4_balance_before_elec_store[hour] - elec_store_change
+        // +- 12 h average of balance
+        var sum = 0; var n = 0;
+        for (var i=-12; i<12; i++) {
+            var index = hour + i
+            if (index>=hours) index-=hours
+            if (index<0) index += hours
+            sum += s4_balance_before_elec_store[index]
+            n++;
         }
-        // ---------------------------------------------------------------------------------
-        // Basic store
-        // ---------------------------------------------------------------------------------
-        else if (store_type=="forecast") {
-            // 7 day forecast
-            var average_length = 12;
-            
-            var sum_pos = 0; var sum_neg = 0;
-            for (var i=0; i<average_length; i++) {
-                var index = hour + i
-                if (index>=hours) index-=hours
-                if (index>=0) {
-                    if (s4_balance_before_elec_store[index]>0) {
-                        sum_pos += s4_balance_before_elec_store[index]
-                    } else {
-                        sum_neg += -1*s4_balance_before_elec_store[index]
-                    }
-                }
-            }
-            // Create scaling ratio value between 0 and 1
-            // 1: excess power approaching
-            // 0: power deficit approaching
-            forecast_ratio = ((sum_pos-sum_neg)*0.005)+0.5
-            if (forecast_ratio>1.0) forecast_ratio = 1.0;
-            if (forecast_ratio<0.0) forecast_ratio = 0.0;
-            
-            var balance = s4_balance_before_elec_store[hour]
-            elec_store_charge = 0
-            elec_store_discharge = 0
-            if (balance>0) {
-                elec_store_charge = balance * Math.pow(1.0 - forecast_ratio,0.3)
-                if (elec_store_charge>elec_store_charge_cap) elec_store_charge = elec_store_charge_cap                                          // Limit by max charge rate 
-                if (elec_store_charge>(elec_store_storage_cap-elecstore_SOC)) elec_store_charge = elec_store_storage_cap - elecstore_SOC        // Limit by available SOC
-                elecstore_SOC += elec_store_charge
-                balance -= elec_store_charge
-            } else {
-                elec_store_discharge = -1*balance * Math.pow(forecast_ratio,0.3)                                                       // Discharge by extent of unmet demand
-                if (elec_store_discharge>elec_store_charge_cap) elec_store_discharge = elec_store_charge_cap                           // Limit by max discharge rate
-                if (elec_store_discharge>elecstore_SOC) elec_store_discharge = elecstore_SOC                                           // Limit by available SOC
-                elecstore_SOC -= elec_store_discharge
-                balance += elec_store_discharge
-            }
-            balance_after_storage = balance
-        }
-        // ---------------------------------------------------------------------------------
-        // Basic store
-        // ---------------------------------------------------------------------------------
-        else if (store_type=="basic") {
-            elec_store_charge = 0
-            elec_store_discharge = 0
-            var balance = s4_balance_before_elec_store[hour]
-            
-            if (balance>0) {
-                elec_store_charge = balance                                                                                 // Charge by extend of available oversupply
-                if (elec_store_charge>elec_store_charge_cap) elec_store_charge = elec_store_charge_cap                      // Limit by max charge rate 
-                if (elec_store_charge>(elec_store_storage_cap-elecstore_SOC)) elec_store_charge = elec_store_storage_cap - elecstore_SOC      // Limit by available SOC
-                elecstore_SOC += elec_store_charge
-                balance -= elec_store_charge
-            } else {
-                elec_store_discharge = -1*balance                                                                           // Discharge by extent of unmet demand
-                if (elec_store_discharge>elec_store_charge_cap) elec_store_discharge = elec_store_charge_cap                     // Limit by max discharge rate
-                if (elec_store_discharge>elecstore_SOC) elec_store_discharge = elecstore_SOC                                     // Limit by available SOC
-                elecstore_SOC -= elec_store_discharge
-                balance += elec_store_discharge
-            }
-            balance_after_storage = balance
-        }
-        else {
-            elec_store_discharge = 0
-            balance_after_storage = s4_balance_before_elec_store[hour]
-        }
-        // ---------------------------------------------------------------------------
+        average_12h_balance_before_elec_storage = sum / n;
+        deviation_from_mean_elec = balance - average_12h_balance_before_elec_storage
         
+        if (electricity_storage_enabled) {
+            if (balance>=0.0) {
+                if (deviation_from_mean_elec>=0.0) {
+                    // charge
+                    elec_store_charge = (elec_store_storage_cap-elecstore_SOC)*deviation_from_mean_elec/(elec_store_storage_cap*0.5)
+                    if (elec_store_charge>(elec_store_storage_cap - elecstore_SOC)) elec_store_charge = elec_store_storage_cap - elecstore_SOC   // Limit to available SOC
+                    if (elec_store_charge>elec_store_charge_cap) elec_store_charge = elec_store_charge_cap                                       // Limit to charge capacity
+                    if (elec_store_charge>balance) elec_store_charge = balance
+                    balance -= elec_store_charge
+                    elecstore_SOC += elec_store_charge
+                }
+            } else {
+                if (deviation_from_mean_elec<0.0) {
+                    // discharge
+                    elec_store_discharge = elecstore_SOC*-deviation_from_mean_elec/(elec_store_storage_cap*0.5)
+                    if (elec_store_discharge>elecstore_SOC) elec_store_discharge = elecstore_SOC                      // Limit to elecstore SOC
+                    if (elec_store_discharge>elec_store_charge_cap) elec_store_discharge = elec_store_charge_cap      // Limit to discharge capacity
+                    if (elec_store_discharge>-balance) elec_store_discharge = -balance
+                    balance += elec_store_discharge
+                    elecstore_SOC -= elec_store_discharge
+                }
+            }
+        }
+        if (elecstore_SOC<0) elecstore_SOC = 0                                                              // limits here can loose energy in the calc
+        if (elecstore_SOC>elec_store_storage_cap) elecstore_SOC = elec_store_storage_cap                    // limits here can loose energy in the calc
+        // ----------------------------------------------------------------------------
+          
         s5_elecstore_SOC.push(elecstore_SOC)
         data.elecstore_SOC.push([time,elecstore_SOC])        
+        data.elec_store_charge.push([time,elec_store_charge])
         data.elec_store_discharge.push([time,elec_store_discharge])
         
-        balance = balance_after_storage
-        
-        if (balance_after_storage>=0.0) {
-            total_initial_elec_balance_positive += balance_after_storage
+        if (balance>=0.0) {
+            total_initial_elec_balance_positive += balance
             initial_elec_balance_positive++
         }
                 
@@ -814,7 +731,7 @@ function fullzcb2_run()
         // ----------------------------------------------------------------------------
         // 1. Electrolysis input
         electricity_for_electrolysis = 0
-        if (balance>0) {
+        if (balance>=0.0) {
             electricity_for_electrolysis = balance
             // Limit by hydrogen electrolysis capacity
             if (electricity_for_electrolysis>electrolysis_cap) electricity_for_electrolysis = electrolysis_cap
@@ -853,7 +770,7 @@ function fullzcb2_run()
         available_hydrogen = hydrogen_SOC-(hydrogen_storage_cap*minimum_hydrogen_store_level)
         if (hydrogen_to_methanation>available_hydrogen) hydrogen_to_methanation = available_hydrogen
         if (hydrogen_to_methanation>methanation_capacity) hydrogen_to_methanation = methanation_capacity
-        if (hydrogen_to_methanation<0) hydrogen_to_methanation = 0
+        if (hydrogen_to_methanation<0.0) hydrogen_to_methanation = 0.0
         hydrogen_SOC -= hydrogen_to_methanation
                        
         s5_hydrogen_SOC.push(hydrogen_SOC)
@@ -869,7 +786,7 @@ function fullzcb2_run()
         // Dispatchable (backup power via CCGT gas turbines)
         // ---------------------------------------------------------------------------- 
         electricity_from_dispatchable = 0       
-        if (balance<0) electricity_from_dispatchable = -balance
+        if (balance<0.0) electricity_from_dispatchable = -balance
         // Limit by methane availability
         if (electricity_from_dispatchable>(methane_SOC*dispatchable_gen_eff)) electricity_from_dispatchable = methane_SOC*dispatchable_gen_eff
         // Limit by CCGT capacity
@@ -879,23 +796,24 @@ function fullzcb2_run()
         total_electricity_from_dispatchable += electricity_from_dispatchable
         if (electricity_from_dispatchable>max_dispatchable_capacity) max_dispatchable_capacity = electricity_from_dispatchable
         data.electricity_from_dispatchable.push([time,electricity_from_dispatchable])
-                 
+        
         // Final electricity balance
         balance += electricity_from_dispatchable
         s5_final_balance.push(balance)
 
-        if (balance<0) {
-            total_final_elec_balance_negative += -1*balance
+        export_elec = 0.0
+        unmet_elec = 0.0
+        if (balance>=0.0) {
+            export_elec = balance
+            total_final_elec_balance_positive += export_elec
+            final_elec_balance_positive++
+        } else {
+            unmet_elec = -balance
+            total_final_elec_balance_negative += unmet_elec
             final_elec_balance_negative++
         }
-        
-        export_elec = 0
-        if (balance>=0.0) {
-            total_final_elec_balance_positive += balance
-            final_elec_balance_positive++
-            export_elec = balance
-        }
         data.export_elec.push([time,export_elec])
+        data.unmet_elec.push([time,unmet_elec])
                 
         // ----------------------------------------------------------------------------
         // Methane
@@ -968,7 +886,7 @@ function fullzcb2_run()
     total_demand += total_industrial_methane_demand
     total_demand += total_industrial_biomass_demand
     
-    total_demand += total_EV_dumb_charge
+    total_demand += total_EV_charge
     total_demand += total_elec_trains_demand
     total_demand += total_hydrogen_for_hydrogen_vehicles
     total_demand += transport_CH4_demand*10000.0
@@ -1090,22 +1008,32 @@ function fullzcb2_run()
     loading_prc(90,"tests");
     
     // Output
+    
     var out = "";
+    var error = 0
     for (var hour = 0; hour < hours; hour++) {
-        var test = testlines[hour].split(",");
-        var heatstore_SOC = parseFloat(test[1]);
-        var BEV_Store_SOC = parseFloat(test[2]);
-        var hydrogen_SOC = parseFloat(test[4]);
-        var methane_SOC = parseFloat(test[5]);
-        var final_balance = parseFloat(test[6]);
         
-        error = Math.abs(final_balance-s5_final_balance[hour])
+        //var test = testlines[hour].split(",");
+        //var heatstore_SOC = parseFloat(test[1]);
+        //var BEV_Store_SOC = parseFloat(test[2]);
+        //var hydrogen_SOC = parseFloat(test[4]);
+        //var methane_SOC = parseFloat(test[5]);
+        //var final_balance = parseFloat(test[6]);
         
-        if (error>1) {
+        //error = Math.abs(final_balance-s5_final_balance[hour])
+        
+        //if (error>1) {
             //out += (hour+2)+"\t"+final_balance.toFixed(1)+"\t"+s5_final_balance[hour].toFixed(1)+"\t"+error+"\n";
-        }
+        //}
         
+        supply = data.s1_total_variable_supply[hour][1]
+        demand = data.s1_traditional_elec_demand[hour][1] + data.spacewater_elec[hour][1] + data.industry_elec[hour][1] + data.EL_transport[hour][1] + data.electricity_for_electrolysis[hour][1] + data.elec_store_charge[hour][1]
+        balance = (supply + data.unmet_elec[hour][1] + data.electricity_from_dispatchable[hour][1] + data.elec_store_discharge[hour][1]) - demand-data.export_elec[hour][1]
+        error += Math.abs(balance)
     } 
+    
+    console.log("balance error: "+error.toFixed(12));
+    
         
     $(".modeloutput").each(function(){
         var type = $(this).attr("type");
@@ -1222,7 +1150,7 @@ function fullzcb2_run()
         "stack":[
           {"kwhd":total_traditional_elec*scl,"name":"Trad Elec","color":0},
           {"kwhd":total_space_heat_demand*scl,"name":"Space & Water","color":0},
-          {"kwhd":(total_EV_dumb_charge+total_elec_trains_demand)*scl,"name":"Electric Transport","color":0},
+          {"kwhd":(total_EV_charge+total_elec_trains_demand)*scl,"name":"Electric Transport","color":0},
           {"kwhd":total_hydrogen_for_hydrogen_vehicles*scl,"name":"Hydrogen Transport","color":0},
           {"kwhd":transport_CH4_demand,"name":"Methane Transport","color":0},
           {"kwhd":transport_biofuels_demand,"name":"Biofuel Transport","color":0},
@@ -1269,8 +1197,8 @@ function fullzcb2_view(start,end,interval)
             {stack:true, label: "Traditional", data:dataout.s1_traditional_elec_demand, color:"#0044aa"},
             {stack:true, label: "Industry & Cooking", data:dataout.industry_elec, color:"#1960d5"},
             {stack:true, label: "Electric Heat", data:dataout.spacewater_elec, color:"#cc6622"},
-            {stack:true, label: "Heatstore Charge", data:dataout.heatstore, color:"#cc3311"},
-            {stack:true, label: "EV", data:dataout.EV_charge, color:"#aac15b"},
+            {stack:true, label: "Electric Transport", data:dataout.EL_transport, color:"#aac15b"},
+            {stack:true, label: "Elec Store Charge", data:dataout.elec_store_charge, color:"#006a80"},
             {stack:true, label: "Electrolysis", data:dataout.electricity_for_electrolysis, color:"#00aacc"},
             {stack:true, label: "Exess", data:dataout.export_elec, color:"#33ccff", lines: {lineWidth:0, fill: 0.4 }},            
             {stack:false, label: "Supply", data:dataout.s1_total_variable_supply, color:"#000000", lines: {lineWidth:0.2, fill: false }}

@@ -166,7 +166,6 @@ function storage_algorithm_run()
             if (balance>=0.0) {
                 if (deviation_from_mean[hour]>=0.0) {
                     store_charge = (store_cap-store_SOC)*deviation_from_mean[hour]/(store_cap*0.5)      // Proportional charge
-                    if (balance>0 && store_charge>balance) store_charge = balance
                     if (store_charge>store_charge_cap) store_charge = store_charge_cap                  // Limit by max charge rate
                     if (store_charge>(store_cap-store_SOC)) store_charge = store_cap - store_SOC        // Limit by available SOC
                     if (store_charge>balance) store_charge = balance                                    // Limit charge to available balance
