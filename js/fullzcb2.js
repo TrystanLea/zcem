@@ -100,7 +100,7 @@ function fullzcb2_init()
     smart_charging_enabled = 1
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
-    biomass_for_biogas = 94.0
+    biomass_for_biogas = 81.0 //94.0
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
@@ -167,6 +167,7 @@ function fullzcb2_run()
     methane_SOC = methane_SOC_start
     
     total_EV_charge = 0
+    total_EV_demand = 0
     total_elec_trains_demand = 0
     
     initial_elec_balance_positive = 0
@@ -296,7 +297,10 @@ function fullzcb2_run()
         EL_transport: [],
         electricity_for_electrolysis: [],
         export_elec:[],
-        unmet_elec:[]
+        unmet_elec:[],
+        heatstore_discharge_GWth:[],
+        spacewater_balance:[],
+        spacewater_heat:[]
     }
     
     // move to hourly model if needed
@@ -397,134 +401,6 @@ function fullzcb2_run()
     }
     loading_prc(40,"model stage 1");
 
-    // --------------------------------------------------------------------------------------------------------------
-    // Stage 2: Heatstore
-    // --------------------------------------------------------------------------------------------------------------
-    s2_deviation_from_mean_GWth = []
-    for (var hour = 0; hour < hours; hour++) {
-        var time = datastarttime + (hour * 3600 * 1000);
-        
-        var sum = 0; var n = 0;
-        for (var i=-12; i<12; i++) {
-            var index = hour + i
-            if (index>=hours) index-=hours
-            if (index<0) index += hours
-            sum += s1_balance_before_heat_storage[index]
-            n++;
-        }
-        average_12h_balance_heat = sum / n;
-        
-        deviation_from_mean_GWe = s1_balance_before_heat_storage[hour] - average_12h_balance_heat
-        deviation_from_mean_GWth = deviation_from_mean_GWe * GWth_GWe
-        
-        s2_deviation_from_mean_GWth.push(deviation_from_mean_GWth)
-    }
-    loading_prc(50,"model stage 2");
-    
-    s3_heatstore_SOC = []
-    s3_balance_before_BEV_storage = []
-    s3_spacewater_elec_demand = []
-    s3_biomass_for_spacewaterheat = []
-    s3_methane_for_spacewaterheat = []
-    
-    for (var hour = 0; hour < hours; hour++) {
-        var time = datastarttime + (hour * 3600 * 1000);
-        
-        var sum_pos = 0; var sum_neg = 0;
-        for (var i=0; i<8; i++) {
-            var index = hour + i
-            if (index>=hours) index-=hours
-            if (s2_deviation_from_mean_GWth[index]>0) {
-                sum_pos += s2_deviation_from_mean_GWth[index]
-            } else {
-                sum_neg += s2_deviation_from_mean_GWth[index]
-            }
-        }
-        
-        // If the balance from the previous section is negative
-        // we have surplus heat supply e.g solar thermal, geothermal etc.
-        spacewater_demand = 0.0
-        spacewater_surplus = 0.0
-        spacewater_balance = s1_spacewater_demand_before_heatstore[hour]
-        if (spacewater_balance>=0.0) {
-            spacewater_demand = spacewater_balance 
-        } else {
-            spacewater_surplus = -spacewater_balance
-        }
-        
-        heat_store_charge_GWth = 0.0
-        heat_store_discharge_GWth = 0.0
-        
-        if (s2_deviation_from_mean_GWth[hour]>=0.0) {
-            heat_store_charge_GWth = (heatstore_storage_cap-heatstore_SOC)*(s2_deviation_from_mean_GWth[hour]/sum_pos)
-            if (heat_store_charge_GWth>heatstore_charge_cap) heat_store_charge_GWth = heatstore_charge_cap                                      // limit by charge capacity
-        } else {
-            heat_store_discharge_GWth = spacewater_demand * (s2_deviation_from_mean_GWth[hour]/sum_neg)
-            if (heat_store_discharge_GWth>spacewater_demand) heat_store_discharge_GWth = spacewater_demand                                      // limit discharge by demand
-            if (heat_store_discharge_GWth>heatstore_charge_cap) heat_store_discharge_GWth = heatstore_charge_cap                                // limit by max discharge capacity
-            if (heat_store_discharge_GWth>heatstore_SOC) heat_store_discharge_GWth = heatstore_SOC                                              // limit by available SOC        
-        }
-        
-        heat_spill = 0.0
-        heatstore_change = 0.0
-        if (heatstore_enabled) {
-            if (spacewater_balance>=0.0) {
-                heatstore_change = heat_store_charge_GWth - heat_store_discharge_GWth
-            } else {
-                // This overwrites potential heat charging from the section above, needs looking at
-                heatstore_change = spacewater_surplus                                                                                           // Charge heat store with surplus
-                if ((heatstore_SOC+heatstore_change)>heatstore_storage_cap) heatstore_change = heatstore_storage_cap - heatstore_SOC            // Limit to available store
-                heat_spill = spacewater_surplus - heatstore_change
-            }
-        }
-        
-        s3_heatstore_SOC.push(heatstore_SOC)
-        data.heatstore_SOC.push([time,heatstore_SOC])
-        heatstore_SOC += heatstore_change
-        total_heat_spill += heat_spill
-                
-        // space & water heat tab
-        spacewater_demand_after_heatstore = spacewater_balance + heatstore_change
-        if (spacewater_demand_after_heatstore<0.0) spacewater_demand_after_heatstore = 0.0
-        
-        // electric resistance
-        heat_from_elres = spacewater_demand_after_heatstore * spacewater_share_elres
-        elres_elec_demand = heat_from_elres / elres_efficiency
-        
-        // heatpumps
-        heat_from_heatpumps = spacewater_demand_after_heatstore * spacewater_share_heatpumps
-        heatpump_elec_demand = heat_from_heatpumps / heatpump_COP
-        ambient_heat_used = heat_from_heatpumps * (1.0-1.0/heatpump_COP)
-        total_ambient_heat_supply += ambient_heat_used
-        
-        // biomass heat
-        heat_from_biomass = spacewater_demand_after_heatstore * spacewater_share_biomass
-        biomass_for_spacewaterheat = heat_from_biomass / biomass_efficiency
-        s3_biomass_for_spacewaterheat.push(biomass_for_spacewaterheat)
-        total_biomass_for_spacewaterheat_loss += biomass_for_spacewaterheat - heat_from_biomass
-        
-        // methane/gas boiler heat
-        heat_from_methane = spacewater_demand_after_heatstore * spacewater_share_methane
-        methane_for_spacewaterheat = heat_from_methane / methane_boiler_efficiency
-        s3_methane_for_spacewaterheat.push(methane_for_spacewaterheat)
-        total_methane_for_spacewaterheat_loss += methane_for_spacewaterheat - heat_from_methane
-        
-        // check for unmet heat
-        unmet_heat_demand = spacewater_demand_after_heatstore - heat_from_heatpumps - heat_from_elres - heat_from_biomass - heat_from_methane
-        if (unmet_heat_demand.toFixed(3)>0) {
-            unmet_heat_demand_count++
-            total_unmet_heat_demand += unmet_heat_demand
-        }
-        
-        spacewater_elec_demand = heatpump_elec_demand + elres_elec_demand // electricity tab
-        s3_spacewater_elec_demand.push(spacewater_elec_demand)
-        data.spacewater_elec.push([time,spacewater_elec_demand])
-        
-        // Balance calculation for BEV storage stage
-        s3_balance_before_BEV_storage.push(data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - spacewater_elec_demand)
-    }
-    loading_prc(60,"model stage 3");
-
     // ---------------------------------------------------------------------------
     // Industrial
     // ---------------------------------------------------------------------------
@@ -579,6 +455,124 @@ function fullzcb2_run()
         total_industrial_biomass_demand += industrial_biomass_demand + industrial_biomass_CHP_demand
     }
     
+    // --------------------------------------------------------------------------------------------------------------
+    // Stage 2: Heatstore
+    // --------------------------------------------------------------------------------------------------------------
+    s2_deviation_from_mean_GWth = []
+    for (var hour = 0; hour < hours; hour++) {
+        var time = datastarttime + (hour * 3600 * 1000);
+        
+        var sum = 0; var n = 0;
+        for (var i=-12; i<12; i++) {
+            var index = hour + i
+            if (index>=hours) index-=hours
+            if (index<0) index += hours
+            sum += s1_spacewater_demand_before_heatstore[index]
+            n++;
+        }
+        average_12h_balance_heat = sum / n;
+        
+        deviation_from_mean_GWe = s1_spacewater_demand_before_heatstore[hour] - average_12h_balance_heat
+        deviation_from_mean_GWth = deviation_from_mean_GWe * GWth_GWe
+        
+        s2_deviation_from_mean_GWth.push(deviation_from_mean_GWth)
+    }
+    loading_prc(50,"model stage 2");
+    
+    s3_heatstore_SOC = []
+    s3_balance_before_BEV_storage = []
+    s3_spacewater_elec_demand = []
+    s3_biomass_for_spacewaterheat = []
+    s3_methane_for_spacewaterheat = []
+    
+    for (var hour = 0; hour < hours; hour++) {
+        var time = datastarttime + (hour * 3600 * 1000);
+        
+        spacewater_balance = s1_spacewater_demand_before_heatstore[hour]
+        data.spacewater_balance.push([time,spacewater_balance])  
+        
+        // ---------------------------------------------------------------------------------------------
+        // HEATSTORE
+        // ---------------------------------------------------------------------------------------------
+        heatstore_charge_GWth = 0
+        heatstore_discharge_GWth = 0
+        
+        // CHARGE
+        if (s2_deviation_from_mean_GWth[hour]<0.0) {
+            heatstore_charge_GWth = -s2_deviation_from_mean_GWth[hour] * 0.3
+            // heatstore_charge_GWth = (heatstore_storage_cap-heatstore_SOC)*-s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
+        }
+        if (heatstore_charge_GWth>heatstore_charge_cap) heatstore_charge_GWth = heatstore_charge_cap
+        if ((heatstore_charge_GWth+heatstore_SOC)>heatstore_storage_cap) heatstore_charge_GWth = heatstore_storage_cap - heatstore_SOC
+        
+        spacewater_balance += heatstore_charge_GWth
+        heatstore_SOC += heatstore_charge_GWth
+        
+        // DISCHARGE
+        if (s2_deviation_from_mean_GWth[hour]>=0.0) {  
+            heatstore_discharge_GWth = s2_deviation_from_mean_GWth[hour] * 0.2
+            // heatstore_discharge_GWth = heatstore_SOC*s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
+            // if (heatstore_discharge_GWth>spacewater_balance) heatstore_discharge_GWth = spacewater_balance
+        }
+        if (heatstore_discharge_GWth>heatstore_charge_cap) heatstore_discharge_GWth = heatstore_charge_cap
+        if (heatstore_discharge_GWth>heatstore_SOC)  heatstore_discharge_GWth = heatstore_SOC
+        
+        data.heatstore_discharge_GWth.push([time,heatstore_discharge_GWth])        
+        
+        spacewater_balance -= heatstore_discharge_GWth
+        heatstore_SOC -= heatstore_discharge_GWth
+        // ---------------------------------------------------------------------------------------------
+        if (spacewater_balance<0.0) {
+            total_heat_spill += -spacewater_balance
+            spacewater_balance = 0
+        }
+        
+        
+        s3_heatstore_SOC.push(heatstore_SOC)
+        data.heatstore_SOC.push([time,heatstore_SOC])
+        data.spacewater_heat.push([time,spacewater_balance])
+        // space & water heat tab
+        spacewater_demand_after_heatstore = spacewater_balance
+        if (spacewater_demand_after_heatstore<0.0) spacewater_demand_after_heatstore = 0.0
+        
+        // electric resistance
+        heat_from_elres = spacewater_demand_after_heatstore * spacewater_share_elres
+        elres_elec_demand = heat_from_elres / elres_efficiency
+        
+        // heatpumps
+        heat_from_heatpumps = spacewater_demand_after_heatstore * spacewater_share_heatpumps
+        heatpump_elec_demand = heat_from_heatpumps / heatpump_COP
+        ambient_heat_used = heat_from_heatpumps * (1.0-1.0/heatpump_COP)
+        total_ambient_heat_supply += ambient_heat_used
+        
+        // biomass heat
+        heat_from_biomass = spacewater_demand_after_heatstore * spacewater_share_biomass
+        biomass_for_spacewaterheat = heat_from_biomass / biomass_efficiency
+        s3_biomass_for_spacewaterheat.push(biomass_for_spacewaterheat)
+        total_biomass_for_spacewaterheat_loss += biomass_for_spacewaterheat - heat_from_biomass
+        
+        // methane/gas boiler heat
+        heat_from_methane = spacewater_demand_after_heatstore * spacewater_share_methane
+        methane_for_spacewaterheat = heat_from_methane / methane_boiler_efficiency
+        s3_methane_for_spacewaterheat.push(methane_for_spacewaterheat)
+        total_methane_for_spacewaterheat_loss += methane_for_spacewaterheat - heat_from_methane
+        
+        // check for unmet heat
+        unmet_heat_demand = spacewater_demand_after_heatstore - heat_from_heatpumps - heat_from_elres - heat_from_biomass - heat_from_methane
+        if (unmet_heat_demand.toFixed(3)>0) {
+            unmet_heat_demand_count++
+            total_unmet_heat_demand += unmet_heat_demand
+        }
+        
+        spacewater_elec_demand = heatpump_elec_demand + elres_elec_demand // electricity tab
+        s3_spacewater_elec_demand.push(spacewater_elec_demand)
+        data.spacewater_elec.push([time,spacewater_elec_demand])
+        
+        // Balance calculation for BEV storage stage
+        s3_balance_before_BEV_storage.push(data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s1_industrial_elec_demand[hour] - spacewater_elec_demand)
+    }
+    loading_prc(60,"model stage 3");
+    
     // -------------------------------------------------------------------------------------
     // Elec transport
     // -------------------------------------------------------------------------------------
@@ -587,16 +581,12 @@ function fullzcb2_run()
     for (var hour = 0; hour < hours; hour++)
     {
         var time = datastarttime + (hour * 3600 * 1000);
+        balance = s3_balance_before_BEV_storage[hour]
         
-        elec_trains_demand = elec_trains_use_profile[hour%24] * daily_elec_trains_demand
-        total_elec_trains_demand += elec_trains_demand
-        
-        EV_discharge = BEV_use_profile[hour%24] * daily_BEV_demand
-        EV_dumb_charge = BEV_charge_profile[hour%24] * daily_BEV_demand
-        
+        // ---------------------------------------------
         // +- 12 h average of balance before BEV Storage
         var sum = 0; var n = 0;
-        for (var i=-12; i<12; i++) {
+        for (var i=-24; i<24; i++) {
             var index = hour + i
             if (index>=hours) index-=hours
             if (index<0) index += hours
@@ -604,58 +594,64 @@ function fullzcb2_run()
             n++;
         }
         average_12h_balance_before_BEV_storage = sum / n;
-        // deviation from mean
-        balance = s3_balance_before_BEV_storage[hour]
-        deviation_from_mean_BEV = balance - average_12h_balance_before_BEV_storage        
-
-        max_charge_rate = BEV_plugged_in_profile[hour%24] * electric_car_max_charge_rate
-                    
-        EV_smart_charge = 0.0
-        EV_smart_discharge = 0.0
+        deviation_from_mean_BEV = balance - average_12h_balance_before_BEV_storage   
+        // ---------------------------------------------
         
-        if (smart_charging_enabled) {
-            if (balance>=0.0) {
-                if (deviation_from_mean_BEV>=0.0) {
-                    EV_smart_charge = (electric_car_battery_capacity-BEV_Store_SOC)*deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)         // limited by availability forecast
-                    if (EV_smart_charge>max_charge_rate) EV_smart_charge = max_charge_rate                                                              // limited by max charge rate
-                    if (EV_smart_charge>(electric_car_battery_capacity-BEV_Store_SOC)) EV_smart_charge = electric_car_battery_capacity-BEV_Store_SOC    // limited to max available SOC
-                    if (EV_smart_charge>balance) EV_smart_charge = balance                                                                              // limited to available balance
-                }
-            } else {
-                if (deviation_from_mean_BEV<0.0) {
-                    EV_smart_discharge = BEV_Store_SOC*-deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)
-                    if (EV_smart_discharge>EV_dumb_charge) EV_smart_discharge = EV_dumb_charge
-                    if (EV_smart_discharge>-balance) EV_smart_discharge = -balance
-                    if (EV_smart_discharge>BEV_Store_SOC) EV_smart_discharge = BEV_Store_SOC
-                }
+        // Electric trains
+        elec_trains_demand = elec_trains_use_profile[hour%24] * daily_elec_trains_demand
+        total_elec_trains_demand += elec_trains_demand
+        balance -= elec_trains_demand 
+        
+        // Standard EV charge
+        EV_charge = BEV_charge_profile[hour%24] * daily_BEV_demand
+        
+        max_charge_rate = BEV_plugged_in_profile[hour%24] * electric_car_max_charge_rate
+        
+        // SMART CHARGE --------------------------------
+        if (balance>EV_charge) {
+            // EV_charge = balance // simple smart charge
+            if (deviation_from_mean_BEV>0.0) {
+                EV_charge = (electric_car_battery_capacity-BEV_Store_SOC)*deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)
+                if (EV_charge>balance) EV_charge = balance
             }
         }
-        
-        //EV_smart_charge = 0.0
-        //EV_smart_discharge = 0.0
-        
-        EV_charge = EV_smart_charge
-        if (EV_charge<EV_dumb_charge) EV_charge = EV_dumb_charge
-        EV_discharge += EV_smart_discharge
-
+        // Charging rate & quantity limits
+        if (EV_charge>max_charge_rate) EV_charge = max_charge_rate
         if ((BEV_Store_SOC+EV_charge)>electric_car_battery_capacity) EV_charge = electric_car_battery_capacity - BEV_Store_SOC
-        
+        // Subtract EV charge from balance and add to SOC
+        balance -= EV_charge
+        BEV_Store_SOC += EV_charge
+        total_EV_charge += EV_charge
         data.EV_charge.push([time,EV_charge])
-        data.EV_smart_discharge.push([time,EV_smart_discharge])
         
-        BEV_Store_SOC += EV_charge - EV_discharge
+        // EV DEMAND -----------------------------------
+        EV_demand = BEV_use_profile[hour%24] * daily_BEV_demand
+        BEV_Store_SOC -= EV_demand
+        total_EV_demand += EV_demand
+        
+        // SMART DISCHARGE -----------------------------
+        EV_smart_discharge = 0.0
+        if (balance<0.0) {
+            // EV_smart_discharge = -balance
+            if (deviation_from_mean_BEV<0.0) {
+                EV_smart_discharge = BEV_Store_SOC*-deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)
+                if (EV_smart_discharge>-balance) EV_smart_discharge = -balance
+            }
+        }
 
+        // Discharge rate & quantity limits
+        if (EV_smart_discharge>max_charge_rate) EV_smart_discharge = max_charge_rate
+        if (EV_smart_discharge>BEV_Store_SOC) EV_smart_discharge = BEV_Store_SOC
+        // Apply to SOC and balance
+        BEV_Store_SOC -= EV_smart_discharge
+        balance += EV_smart_discharge
+        
+        // Timeseries
+        data.EV_smart_discharge.push([time,EV_smart_discharge])
         s4_BEV_Store_SOC.push(BEV_Store_SOC)
         data.BEV_Store_SOC.push([time,BEV_Store_SOC])
-                
-        electricity_for_transport = elec_trains_demand + EV_charge
-        
-        total_EV_charge += EV_charge
-        
-        data.EL_transport.push([time,electricity_for_transport])
-        
-        balance_before_elec_store = data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s3_spacewater_elec_demand[hour] - s1_industrial_elec_demand[hour] - electricity_for_transport
-        s4_balance_before_elec_store.push(balance_before_elec_store)
+        data.EL_transport.push([time,elec_trains_demand + EV_charge])
+        s4_balance_before_elec_store.push(balance)        
     }
     loading_prc(70,"model stage 4");
     // -------------------------------------------------------------------------------------
@@ -886,7 +882,7 @@ function fullzcb2_run()
     total_demand += total_industrial_methane_demand
     total_demand += total_industrial_biomass_demand
     
-    total_demand += total_EV_charge
+    total_demand += total_EV_demand
     total_demand += total_elec_trains_demand
     total_demand += total_hydrogen_for_hydrogen_vehicles
     total_demand += transport_CH4_demand*10000.0
@@ -1028,7 +1024,7 @@ function fullzcb2_run()
         
         supply = data.s1_total_variable_supply[hour][1]
         demand = data.s1_traditional_elec_demand[hour][1] + data.spacewater_elec[hour][1] + data.industry_elec[hour][1] + data.EL_transport[hour][1] + data.electricity_for_electrolysis[hour][1] + data.elec_store_charge[hour][1]
-        balance = (supply + data.unmet_elec[hour][1] + data.electricity_from_dispatchable[hour][1] + data.elec_store_discharge[hour][1]) - demand-data.export_elec[hour][1]
+        balance = (supply + data.unmet_elec[hour][1] + data.electricity_from_dispatchable[hour][1] + data.elec_store_discharge[hour][1]) + data.EV_smart_discharge[hour][1] - demand-data.export_elec[hour][1]
         error += Math.abs(balance)
     } 
     
@@ -1150,7 +1146,7 @@ function fullzcb2_run()
         "stack":[
           {"kwhd":total_traditional_elec*scl,"name":"Trad Elec","color":0},
           {"kwhd":total_space_heat_demand*scl,"name":"Space & Water","color":0},
-          {"kwhd":(total_EV_charge+total_elec_trains_demand)*scl,"name":"Electric Transport","color":0},
+          {"kwhd":(total_EV_demand+total_elec_trains_demand)*scl,"name":"Electric Transport","color":0},
           {"kwhd":total_hydrogen_for_hydrogen_vehicles*scl,"name":"Hydrogen Transport","color":0},
           {"kwhd":transport_CH4_demand,"name":"Methane Transport","color":0},
           {"kwhd":transport_biofuels_demand,"name":"Biofuel Transport","color":0},
@@ -1239,6 +1235,23 @@ function fullzcb2_view(start,end,interval)
                 {stack:false, label: "Heat Store", data:dataout.heatstore_SOC, yaxis:2, color:"#cc3311", lines: {lineWidth:1, fill: false }},
                 {stack:false, label: "Battery Store", data:dataout.elecstore_SOC, yaxis:2, color:"#1960d5", lines: {lineWidth:1, fill: false }},
                 {stack:false, label: "BEV Store", data:dataout.BEV_Store_SOC, yaxis:2, color:"#aac15b", lines: {lineWidth:1, fill: false }},       
+            ], {
+                xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
+                yaxes: [{},{min: 0},{}],
+                grid: {hoverable: true, clickable: true},
+                selection: { mode: "x" },
+                legend: {position: "nw"}
+            }
+        );
+    }
+    if (view_mode=="heat")
+    {
+        $.plot("#placeholder", [
+                {stack:true, label: "Direct heat", data:dataout.spacewater_heat, color:"#cc6622", lines: {lineWidth:0, fill: 1.0 }},
+                {stack:true, label: "Heatstore discharge", data:dataout.heatstore_discharge_GWth, color:"#a3511b", lines: {lineWidth:0, fill: 1.0 }} ,
+                {stack:false, label: "Heatstore SOC", data:dataout.heatstore_SOC, yaxis:2, color:"#cc3311", lines: {lineWidth:1, fill: false }},
+                {stack:false, label: "Electric for heat", data:dataout.spacewater_elec, color:"#97b5e7", lines: {lineWidth:0, fill: 0.8 }},
+                {stack:false, label: "Heat Demand", data:dataout.spacewater_balance, yaxis:1, color:"#000", lines: {lineWidth:1, fill: false }}
             ], {
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
                 yaxes: [{},{min: 0},{}],

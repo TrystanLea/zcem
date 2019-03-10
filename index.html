@@ -162,7 +162,7 @@ $("#model").on("change",".modelinput",function(){
     var scale = 1.0;
     if (type=="%") scale = 100.0;
     window[varkey] = $(this).val();
-    if (scale!=1.0) window[varkey] /= scale;
+    if (!isNaN(window[varkey])) window[varkey] /= scale;
     var run_fn = page+"_run";
     if (window[run_fn]!=undefined) window[run_fn]();
     var view_fn = page+"_view";
