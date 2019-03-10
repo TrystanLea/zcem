@@ -759,16 +759,16 @@ function fullzcb_run()
             methane_SOC = methane_store_capacity
         }
         
-        if (balance_after_storage>0) {
+        if (balance_after_storage>=0.0) {
             total_initial_elec_balance_positive += balance_after_storage
             initial_elec_balance_positive++
         }
-        if (balance_after_electrolysis_and_dispatchable<0) {
+        if (balance_after_electrolysis_and_dispatchable<0.0) {
             total_final_elec_balance_negative += -1*balance_after_electrolysis_and_dispatchable
             final_elec_balance_negative++
         }
         export_elec = 0
-        if (balance_after_electrolysis_and_dispatchable>0) {
+        if (balance_after_electrolysis_and_dispatchable>=0.0) {
             total_final_elec_balance_positive += balance_after_electrolysis_and_dispatchable
             final_elec_balance_positive++
             export_elec = balance_after_electrolysis_and_dispatchable
