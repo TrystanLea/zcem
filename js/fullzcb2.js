@@ -1,9 +1,43 @@
-// - no grid loss factor
-// - no storage losses
-// - methane losses from store capping, if biogas feed is set too high
-// - review CHP 
-// - potential for unmet hydrogen vehicle demand
-// - search MFIX to find notes
+/*
+---------------------------------------------------
+ZeroCarbonBritain hourly energy model v2
+---------------------------------------------------
+
+CHANGE LOG
+---------------------------------------------------
+
+- Hour for day temperatures roll over at 23:00 in spreadsheet model, adjusted to roll over at midnight but could this be DST related? removed temperature set to zero on last hour due to roll over.
+
+- Addition of gas boiler heating option to explore biogas+sabatier heating option
+
+- Heatstore averaging did not roll over -12h at the start in the same way as the other stores, modified to wrap around for consistency
+
+- Modified heatstore storage model to use the average of the heat demand rather than the average of the electricity balance in order to focus on removing the heat demand peaks, reduces max elec heat demand from ~80GW to 67GW. Looking at the heat store operation visually on the new 'heat' tab also suggest better peak removal. The previous implementation also ran the store prior to industrial electricity demand and so the electricity balance was more often positive which meant the store was perhaps not as utilised as it could have been. 8h forward sum removed, not entirely sure what this was doing, I may well have missed something here. Ideally more research on this would be good to really understand what is the best appraoch.
+
+- EV store added limit to check that charge is not larger than available balance and discharge not larger than negative balance. EV driving demand modified to subtract before the smart V2G discharge.
+
+- Final elec store added limits to check that it does not discharge more than negative balance and does not charge at a rate higher than the surplus available.
+
+- Modifications to stores removes the imbalance in the model that caused dips and peaks above and below the supply line
+
+Store performance, matching addition
+---------------------------------------------------
+- heatstore:OFF  EVstore:OFF  elecstore:OFF: 81.6 %
+- heatstore:ON   EVstore:OFF  elecstore:OFF: 82.0 %
+- heatstore:ON   EVstore:ON   elecstore:OFF: 89.7 %
+- heatstore:ON   EVstore:OFF  elecstore:ON:  86.1 %
+- heatstore:ON   EVstore:ON   elecstore:ON:  91.9 %
+
+Issues to fix
+---------------------------------------------------
+- no grid loss factor
+- no storage losses
+- methane losses from store capping, if biogas feed is set too high
+- review CHP 
+- potential for unmet hydrogen vehicle demand
+- search MFIX to find notes
+
+*/
 
 function fullzcb2_init()
 {
