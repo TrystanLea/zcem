@@ -1,7 +1,6 @@
-// - no grid loss factor?
-// - balance_before_elec_store = balance_before_storage - EV_smart_charge, not change to BEV store??
-// - are we accounting for electric requirement for heatstore??
-// - methane losses from store capping
+// - no grid loss factor
+// - no storage losses
+// - methane losses from store capping, if biogas feed is set too high
 // - review CHP 
 // - potential for unmet hydrogen vehicle demand
 // - search MFIX to find notes
@@ -497,30 +496,32 @@ function fullzcb2_run()
         heatstore_charge_GWth = 0
         heatstore_discharge_GWth = 0
         
-        // CHARGE
-        if (s2_deviation_from_mean_GWth[hour]<0.0) {
-            heatstore_charge_GWth = -s2_deviation_from_mean_GWth[hour] * 0.3
-            // heatstore_charge_GWth = (heatstore_storage_cap-heatstore_SOC)*-s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
+        if (heatstore_enabled) {
+            // CHARGE
+            if (s2_deviation_from_mean_GWth[hour]<0.0) {
+                heatstore_charge_GWth = -s2_deviation_from_mean_GWth[hour] * 0.3
+                // heatstore_charge_GWth = (heatstore_storage_cap-heatstore_SOC)*-s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
+            }
+            if (heatstore_charge_GWth>heatstore_charge_cap) heatstore_charge_GWth = heatstore_charge_cap
+            if ((heatstore_charge_GWth+heatstore_SOC)>heatstore_storage_cap) heatstore_charge_GWth = heatstore_storage_cap - heatstore_SOC
+            
+            spacewater_balance += heatstore_charge_GWth
+            heatstore_SOC += heatstore_charge_GWth
+            
+            // DISCHARGE
+            if (s2_deviation_from_mean_GWth[hour]>=0.0) {  
+                heatstore_discharge_GWth = s2_deviation_from_mean_GWth[hour] * 0.2
+                // heatstore_discharge_GWth = heatstore_SOC*s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
+                // if (heatstore_discharge_GWth>spacewater_balance) heatstore_discharge_GWth = spacewater_balance
+            }
+            if (heatstore_discharge_GWth>heatstore_charge_cap) heatstore_discharge_GWth = heatstore_charge_cap
+            if (heatstore_discharge_GWth>heatstore_SOC)  heatstore_discharge_GWth = heatstore_SOC
+            
+            spacewater_balance -= heatstore_discharge_GWth
+            heatstore_SOC -= heatstore_discharge_GWth
         }
-        if (heatstore_charge_GWth>heatstore_charge_cap) heatstore_charge_GWth = heatstore_charge_cap
-        if ((heatstore_charge_GWth+heatstore_SOC)>heatstore_storage_cap) heatstore_charge_GWth = heatstore_storage_cap - heatstore_SOC
-        
-        spacewater_balance += heatstore_charge_GWth
-        heatstore_SOC += heatstore_charge_GWth
-        
-        // DISCHARGE
-        if (s2_deviation_from_mean_GWth[hour]>=0.0) {  
-            heatstore_discharge_GWth = s2_deviation_from_mean_GWth[hour] * 0.2
-            // heatstore_discharge_GWth = heatstore_SOC*s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
-            // if (heatstore_discharge_GWth>spacewater_balance) heatstore_discharge_GWth = spacewater_balance
-        }
-        if (heatstore_discharge_GWth>heatstore_charge_cap) heatstore_discharge_GWth = heatstore_charge_cap
-        if (heatstore_discharge_GWth>heatstore_SOC)  heatstore_discharge_GWth = heatstore_SOC
         
         data.heatstore_discharge_GWth.push([time,heatstore_discharge_GWth])        
-        
-        spacewater_balance -= heatstore_discharge_GWth
-        heatstore_SOC -= heatstore_discharge_GWth
         // ---------------------------------------------------------------------------------------------
         if (spacewater_balance<0.0) {
             total_heat_spill += -spacewater_balance
@@ -608,7 +609,7 @@ function fullzcb2_run()
         max_charge_rate = BEV_plugged_in_profile[hour%24] * electric_car_max_charge_rate
         
         // SMART CHARGE --------------------------------
-        if (balance>EV_charge) {
+        if (smart_charging_enabled && balance>EV_charge) {
             // EV_charge = balance // simple smart charge
             if (deviation_from_mean_BEV>0.0) {
                 EV_charge = (electric_car_battery_capacity-BEV_Store_SOC)*deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)
@@ -631,7 +632,7 @@ function fullzcb2_run()
         
         // SMART DISCHARGE -----------------------------
         EV_smart_discharge = 0.0
-        if (balance<0.0) {
+        if (smart_charging_enabled && balance<0.0) {
             // EV_smart_discharge = -balance
             if (deviation_from_mean_BEV<0.0) {
                 EV_smart_discharge = BEV_Store_SOC*-deviation_from_mean_BEV/(electric_car_battery_capacity*0.5)
