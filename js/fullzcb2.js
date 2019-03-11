@@ -33,11 +33,13 @@ function fullzcb2_init()
     hydro_cf = 0.3
     geothermal_elec_cf = 0.9
     geothermal_heat_cf = 0.9
-    
+    // ---------------------------------------------    
     // Traditional electricity demand
     prc_reduction_traditional_demand = 100*0.74823
     
+    // ---------------------------------------------
     // Space & water heating demand
+    // ---------------------------------------------
     specific_space_heat_demand = 4.398                // GW/K
     space_heat_base_temperature = 16.0-(385.0/119.0)  // 12.8 K
     water_heating = 95.84;                            // GWh
@@ -58,8 +60,9 @@ function fullzcb2_init()
     heatstore_enabled = 1
     heatstore_storage_cap = 100.0
     heatstore_charge_cap = 50.0
-    
+    // ---------------------------------------------
     // Industrial & cooking
+    // ---------------------------------------------
     annual_cooking_elec = 26.94
     annual_cooking_biogas = 0.0
     annual_cooking_biomass = 0.0
@@ -85,26 +88,31 @@ function fullzcb2_init()
     annual_non_heat_process_biomass_CHP = 0.0
     
     industrial_biofuel = 11.54
-    
+    // ---------------------------------------------
     // Transport
-    BEV_demand = 31.29
+    // ---------------------------------------------
     electrains_demand = 10.8
+    
+    // Electric cars
+    BEV_demand = 31.29
+    electric_car_battery_capacity = 294.75    // GWh
+    electric_car_max_charge_rate = 42.11      // GW
+    smart_charging_enabled = 1
+    
+    // H2 and synthetic fuels
     transport_H2_demand = 13.87
     transport_CH4_demand = 0.0
     transport_biofuels_demand = 59.13
     transport_kerosene_demand = 39.27
-    
-    electric_car_battery_capacity = 294.75    // GWh
-    electric_car_max_charge_rate = 42.11      // GW
-    smart_charging_enabled = 1
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
     biomass_for_biogas = 81.0 //94.0
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
-    
-    // 
+    // ---------------------------------------------
+    // Electricity Storage
+    // ---------------------------------------------
     electricity_storage_enabled = 1
     elec_store_storage_cap = 50.0
     elec_store_charge_cap = 10.0
@@ -152,7 +160,26 @@ function fullzcb2_init()
 
 function fullzcb2_run()
 {
+    // ---------------------------------------------
+    // Supply totals
+    // ---------------------------------------------
+    total_offshore_wind_supply = 0
+    total_onshore_wind_supply = 0
+    total_solar_supply = 0
+    total_solarthermal = 0
+    total_wave_supply = 0
+    total_geothermal_heat = 0
+    total_tidal_supply = 0
+    total_geothermal_elec = 0
+    total_nuclear_supply = 0
+    total_hydro_supply = 0
+    total_biomass_used = 0
+    total_supply = 0
+    total_ambient_heat_supply = 0
+    
+    // ---------------------------------------------
     // Store SOC's
+    // ---------------------------------------------
     heatstore_SOC_start = heatstore_storage_cap * 0.5
     BEV_Store_SOC_start = electric_car_battery_capacity * 0.5
     elecstore_SOC_start = elec_store_storage_cap * 1.0
@@ -165,19 +192,39 @@ function fullzcb2_run()
     hydrogen_SOC = hydrogen_SOC_start
     methane_SOC = methane_SOC_start
     
+    // ---------------------------------------------
+    // Transport
+    // ---------------------------------------------
     total_EV_charge = 0
     total_EV_demand = 0
     total_elec_trains_demand = 0
     
+    total_hydrogen_for_hydrogen_vehicles = 0
+    unmet_hydrogen_demand = 0
+
+    transport_bioliquid_demand = transport_biofuels_demand + transport_kerosene_demand
+
+    // ---------------------------------------------
+    // Heat
+    // ---------------------------------------------
+    total_space_heat_demand = 0
+    total_unmet_heat_demand = 0
+    unmet_heat_demand_count = 0
+    total_biomass_for_spacewaterheat_loss = 0
+    total_methane_for_spacewaterheat_loss = 0
+    total_heat_spill = 0
+    max_heat_demand_elec = 0
+    
+    // --------------------------------------------- 
+    // Final balance
+    // ---------------------------------------------
     initial_elec_balance_positive = 0
     final_elec_balance_negative = 0
     final_elec_balance_positive = 0
     total_initial_elec_balance_positive = 0
     total_final_elec_balance_negative = 0
     total_final_elec_balance_positive = 0
-    total_unmet_heat_demand = 0
-    unmet_heat_demand_count = 0
-    
+
     methane_store_empty_count = 0
     methane_store_full_count = 0
     hydrogen_store_empty_count = 0
@@ -188,34 +235,11 @@ function fullzcb2_run()
     total_electricity_from_dispatchable = 0
     max_dispatchable_capacity = 0
     
-    total_offshore_wind_supply = 0
-    total_onshore_wind_supply = 0
-    total_solar_supply = 0
-    total_solarthermal = 0
-    total_wave_supply = 0
-    total_geothermal_heat = 0
-    total_tidal_supply = 0
-    total_geothermal_elec = 0
-    total_nuclear_supply = 0
-    total_hydro_supply = 0
-    
-    total_biomass_used = 0
-    total_supply = 0
-    total_ambient_heat_supply = 0
-    
-    total_biomass_for_spacewaterheat_loss = 0
-    total_methane_for_spacewaterheat_loss = 0
-    
     // demand totals
     total_traditional_elec = 0
-    total_space_heat_demand = 0
-    
     total_industrial_elec_demand = 0
     total_industrial_methane_demand = 0
     total_industrial_biomass_demand = 0
-    
-    total_hydrogen_for_hydrogen_vehicles = 0
-    unmet_hydrogen_demand = 0
     
     total_grid_losses = 0
     total_electrolysis_losses = 0
@@ -225,14 +249,12 @@ function fullzcb2_run()
     total_FT_losses = 0
     
     total_synth_fuel_demand = 0
-    
     methane_store_vented = 0
-    total_heat_spill = 0
     
     change_traditional_demand = 1.0 - (prc_reduction_traditional_demand/100)
-
-    transport_bioliquid_demand = transport_biofuels_demand + transport_kerosene_demand
-
+    // ---------------------------------------------
+    // Convert to daily demand, used with daily usage profiles
+    // ---------------------------------------------
     water_heating_daily_demand = water_heating * 1000.0 / 365.25    
     
     daily_BEV_demand = BEV_demand * 1000.0 / 365.25
@@ -391,12 +413,10 @@ function fullzcb2_run()
         total_geothermal_heat += geothermal_heat_supply
         
         spacewater_demand_before_heatstore = space_heat_demand + hot_water_demand - geothermal_heat_supply - solarthermal_supply
-        
-        // Heatstore p1
-        balance_before_heat_storage = supply - traditional_elec_demand - (spacewater_demand_before_heatstore/GWth_GWe)
-        
         s1_spacewater_demand_before_heatstore.push(spacewater_demand_before_heatstore)
-        s1_balance_before_heat_storage.push(balance_before_heat_storage)
+        
+        //balance_before_heat_storage = supply - traditional_elec_demand - (spacewater_demand_before_heatstore/GWth_GWe)
+        //s1_balance_before_heat_storage.push(balance_before_heat_storage)
     }
     loading_prc(40,"model stage 1");
 
@@ -452,6 +472,9 @@ function fullzcb2_run()
 
         s1_biomass_for_industry.push(industrial_biomass_demand+industrial_biomass_CHP_demand)
         total_industrial_biomass_demand += industrial_biomass_demand + industrial_biomass_CHP_demand
+        
+        balance_before_heat_storage = data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - (s1_spacewater_demand_before_heatstore[hour] / GWth_GWe)  - industrial_elec_demand
+        s1_balance_before_heat_storage.push(balance_before_heat_storage)
     }
     
     // --------------------------------------------------------------------------------------------------------------
@@ -472,7 +495,7 @@ function fullzcb2_run()
         average_12h_balance_heat = sum / n;
         
         deviation_from_mean_GWe = s1_spacewater_demand_before_heatstore[hour] - average_12h_balance_heat
-        deviation_from_mean_GWth = deviation_from_mean_GWe * GWth_GWe
+        deviation_from_mean_GWth = deviation_from_mean_GWe //* GWth_GWe
         
         s2_deviation_from_mean_GWth.push(deviation_from_mean_GWth)
     }
@@ -499,8 +522,8 @@ function fullzcb2_run()
         if (heatstore_enabled) {
             // CHARGE
             if (s2_deviation_from_mean_GWth[hour]<0.0) {
-                heatstore_charge_GWth = -s2_deviation_from_mean_GWth[hour] * 0.3
-                // heatstore_charge_GWth = (heatstore_storage_cap-heatstore_SOC)*-s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
+                heatstore_charge_GWth = -s2_deviation_from_mean_GWth[hour] * 0.40 * (heatstore_storage_cap / 100.0)
+                //heatstore_charge_GWth = (heatstore_storage_cap-heatstore_SOC)*-s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
             }
             if (heatstore_charge_GWth>heatstore_charge_cap) heatstore_charge_GWth = heatstore_charge_cap
             if ((heatstore_charge_GWth+heatstore_SOC)>heatstore_storage_cap) heatstore_charge_GWth = heatstore_storage_cap - heatstore_SOC
@@ -510,9 +533,9 @@ function fullzcb2_run()
             
             // DISCHARGE
             if (s2_deviation_from_mean_GWth[hour]>=0.0) {  
-                heatstore_discharge_GWth = s2_deviation_from_mean_GWth[hour] * 0.2
-                // heatstore_discharge_GWth = heatstore_SOC*s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
-                // if (heatstore_discharge_GWth>spacewater_balance) heatstore_discharge_GWth = spacewater_balance
+                heatstore_discharge_GWth = s2_deviation_from_mean_GWth[hour] * 0.32 * (heatstore_storage_cap / 100.0)
+                //heatstore_discharge_GWth = heatstore_SOC*s2_deviation_from_mean_GWth[hour]/(heatstore_storage_cap*0.5)
+                if (heatstore_discharge_GWth>spacewater_balance) heatstore_discharge_GWth = spacewater_balance
             }
             if (heatstore_discharge_GWth>heatstore_charge_cap) heatstore_discharge_GWth = heatstore_charge_cap
             if (heatstore_discharge_GWth>heatstore_SOC)  heatstore_discharge_GWth = heatstore_SOC
@@ -566,6 +589,8 @@ function fullzcb2_run()
         }
         
         spacewater_elec_demand = heatpump_elec_demand + elres_elec_demand // electricity tab
+        if (spacewater_elec_demand>max_heat_demand_elec) max_heat_demand_elec = spacewater_elec_demand
+        
         s3_spacewater_elec_demand.push(spacewater_elec_demand)
         data.spacewater_elec.push([time,spacewater_elec_demand])
         
@@ -939,6 +964,8 @@ function fullzcb2_run()
     unaccounted_balance = total_supply + total_unmet_demand - total_demand - total_losses - total_exess
     console.log("unaccounted_balance: "+unaccounted_balance.toFixed(6))
     // -------------------------------------------------------------------------------------------------
+    
+    console.log("max heat elec demand: "+max_heat_demand_elec);
     
     primary_energy_factor = total_supply / total_demand
     
