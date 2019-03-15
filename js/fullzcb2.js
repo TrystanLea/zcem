@@ -140,7 +140,7 @@ function fullzcb2_init()
     transport_kerosene_demand = 39.27
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
-    biomass_for_biogas = 81.0 //94.0
+    biomass_for_biogas = 0.0 //94.0
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
@@ -152,9 +152,9 @@ function fullzcb2_init()
     elec_store_charge_cap = 10.0
     
     // Hydrogen
-    electrolysis_cap = 35.0
+    electrolysis_cap = 70.0
     electrolysis_eff = 0.7
-    hydrogen_storage_cap = 20000.0
+    hydrogen_storage_cap = 40000.0
     minimum_hydrogen_store_level = 0.0
     
     // Methanation
@@ -163,6 +163,8 @@ function fullzcb2_init()
     methanation_raw_biogas_to_H2_ratio = 1.2
     methane_store_capacity = 70000.0
     
+    // Biogas storage
+    biogas_store_capacity = 10000.0
     anaerobic_digestion_efficiency = 0.5747
     
     // Dispatchable
@@ -190,6 +192,65 @@ function fullzcb2_init()
     
     BEV_plugged_in_profile = [0.873684211, 0.889473684, 0.894736842, 0.9, 0.878947368, 0.826315789, 0.689473684, 0.378947368, 0.436842105, 0.489473684, 0.405263158, 0.336842105, 0.278947368, 0.342105263, 0.278947368, 0.2, 0.242105263, 0.226315789, 0.331578947, 0.468421053, 0.578947368, 0.668421053, 0.773684211, 0.831578947];
 
+    // -----------------------------------------------------------------
+    // Sabatier
+    // -----------------------------------------------------------------
+    biogas_kwh = 1.0
+    
+    // By volume biogas is primarily 
+    // methane (CH4): 50-70%
+    // carbon dioxide (CO2): 30-50% 
+    // with a mixture of other substances in smaller portions.
+    
+    methane_co2_ratio = 0.65      // 65% assumed methane content in a given volume of biogas
+    methane_energy_density = 13.8 // kWh/kg LHV
+    methane_density = 0.668       // kg/m3 at 20C and 1 atm (NTP)
+    co2_density = 1.842           // kg/m3 at 20C and 1 atm (NTP)
+    
+    // 1. work out co2 mass per kwh of biogas produced
+    methane_kg = biogas_kwh / methane_energy_density
+    methane_m3 = methane_kg / methane_density
+    biogas_m3 = methane_m3 / methane_co2_ratio
+    co2_kg = biogas_m3 * (1.0-methane_co2_ratio) * co2_density
+
+    // 2. work out hydrogen kwh required
+    // Sebatier reaction 
+    // 44.009g CO2 + 8.064g 4H2 → 16.043g CH4 + 36.03g 2H2O
+    hydrogen_energy_density = 33.3 // kWh/kg
+    h2_kg = co2_kg * (8.064/44.009)
+    h2_kwh = h2_kg * 33.3
+    
+    co2_to_biogas_ratio = co2_kg / biogas_kwh
+    hydrogen_to_biogas_ratio = h2_kwh / biogas_kwh
+    
+    methanation_efficiency = (16.043 * methane_energy_density) / (8.064 * hydrogen_energy_density)
+    //methanation_raw_biogas_to_H2_ratio = 1.0 / hydrogen_to_biogas_ratio
+    
+    console.log("Sabatier calculation:")
+    console.log("---------------------")
+    console.log("biogas: "+biogas_kwh)
+    console.log("methane_kg: "+methane_kg)
+    console.log("co2_kg: "+co2_kg)    
+    console.log("h2_energy: "+h2_kwh)
+    console.log("co2_to_biogas_ratio: "+co2_to_biogas_ratio)
+    console.log("methanation_efficiency: "+methanation_efficiency)
+    console.log("---------------------")
+    
+    // lets say we create 1 kWh of hydrogen
+    // h2_kg = h2_kwh / 33.3
+    // co2_kg = h2_kg * (44.009/8.064) 
+    // ch4_kg = h2_kg * (16.043/8.064)
+    // ch4_kwh = ch4_kg * 13.8
+    // 0.164 kg co2 per kWh of hydrogen
+    // 0.824 kWh of methane per kWh of hydrogen
+    //
+    // 1 GWh of hydrogen + 164 tons of CO2 = 0.824 GWh of methane
+    
+    // 100,000 GWh of methane 
+    // 121,000 GWh of hydrogen
+    // 20 Mton of CO2
+    co2_store_capacity = 20000000 // tons
+    
 }
 
 function fullzcb2_run()
@@ -219,12 +280,16 @@ function fullzcb2_run()
     elecstore_SOC_start = elec_store_storage_cap * 1.0
     hydrogen_SOC_start = hydrogen_storage_cap * 0.5
     methane_SOC_start = methane_store_capacity * 0.5
+    biogas_SOC_start = biogas_store_capacity * 0.5
     
     heatstore_SOC = heatstore_SOC_start
     BEV_Store_SOC = BEV_Store_SOC_start
     elecstore_SOC = elecstore_SOC_start
     hydrogen_SOC = hydrogen_SOC_start
     methane_SOC = methane_SOC_start
+    biogas_SOC = biogas_SOC_start
+    
+    co2_store_level = co2_store_capacity * 0.5
     
     // ---------------------------------------------
     // Transport
@@ -284,6 +349,11 @@ function fullzcb2_run()
     
     total_synth_fuel_demand = 0
     methane_store_vented = 0
+    total_methane_demand = 0
+    
+    total_electricity_for_electrolysis = 0
+    total_hydrogen_to_methanation = 0
+    total_hydrogen_to_synth_fuel = 0
     
     change_traditional_demand = 1.0 - (prc_reduction_traditional_demand/100)
     // ---------------------------------------------
@@ -328,7 +398,7 @@ function fullzcb2_run()
     daily_biomass_for_biogas = biomass_for_biogas * 1000.0 / 365.25
     hourly_biomass_for_biogas = daily_biomass_for_biogas / 24.0
 
-    methane_from_biogas = hourly_biomass_for_biogas * anaerobic_digestion_efficiency
+    biogas_supply = hourly_biomass_for_biogas * anaerobic_digestion_efficiency
 
     var check = [];
     
@@ -355,7 +425,9 @@ function fullzcb2_run()
         unmet_elec:[],
         heatstore_discharge_GWth:[],
         spacewater_balance:[],
-        spacewater_heat:[]
+        spacewater_heat:[],
+        co2_store_level:[],
+        electricity_for_DAC:[]
     }
     
     // move to hourly model if needed
@@ -721,6 +793,8 @@ function fullzcb2_run()
     s5_hydrogen_SOC = []
     s5_methane_SOC = []
     s5_final_balance = []
+    s5_electricity_for_DAC = []
+    total_electricity_for_DAC = 0
     for (var hour = 0; hour < hours; hour++)
     {
         var time = datastarttime + (hour * 3600 * 1000);
@@ -800,6 +874,8 @@ function fullzcb2_run()
         data.electricity_for_electrolysis.push([time,electricity_for_electrolysis])
         hydrogen_SOC += hydrogen_from_electrolysis
         
+        total_electricity_for_electrolysis += electricity_for_electrolysis
+        
         // 2. Hydrogen vehicle demand
         hydrogen_for_hydrogen_vehicles = daily_transport_H2_demand / 24.0
         if (hydrogen_for_hydrogen_vehicles>hydrogen_SOC) {
@@ -820,14 +896,17 @@ function fullzcb2_run()
         } 
         hydrogen_SOC -= hydrogen_to_synth_fuel
         
+        total_hydrogen_to_synth_fuel += hydrogen_to_synth_fuel
+        
         // 4. Hydrogen to methanation
         // limited to available hydrogen and methanation capacity
-        hydrogen_to_methanation = methane_from_biogas/methanation_raw_biogas_to_H2_ratio // max limit on hydrogen to methanation is biogas supply level
-        available_hydrogen = hydrogen_SOC-(hydrogen_storage_cap*minimum_hydrogen_store_level)
-        if (hydrogen_to_methanation>available_hydrogen) hydrogen_to_methanation = available_hydrogen
-        if (hydrogen_to_methanation>methanation_capacity) hydrogen_to_methanation = methanation_capacity
-        if (hydrogen_to_methanation<0.0) hydrogen_to_methanation = 0.0
-        hydrogen_SOC -= hydrogen_to_methanation
+        // hydrogen_to_methanation = 4.425 // biogas_supply/methanation_raw_biogas_to_H2_ratio // max limit on hydrogen to methanation is biogas supply level
+        // available_hydrogen = hydrogen_SOC-(hydrogen_storage_cap*minimum_hydrogen_store_level)
+        // if (hydrogen_to_methanation>available_hydrogen) hydrogen_to_methanation = available_hydrogen
+        // if (hydrogen_to_methanation>methanation_capacity) hydrogen_to_methanation = methanation_capacity
+        // if (hydrogen_to_methanation<0.0) hydrogen_to_methanation = 0.0
+        
+
                        
         s5_hydrogen_SOC.push(hydrogen_SOC)
         data.hydrogen_SOC.push([time,hydrogen_SOC])
@@ -837,6 +916,28 @@ function fullzcb2_run()
         
         // subtract electrolysis from electricity balance
         balance -= electricity_for_electrolysis
+
+        // ----------------------------------------------------------------------------
+        // DAC
+        // ----------------------------------------------------------------------------   
+        // Driving the Climeworks process uses 2.5 megawatt hours (MWh) of heat, at around 100C, for each tonne of CO2, along with 0.5MWh of power.
+        // This energy requirement is roughly equivalent to the 12GJ/tCO2 estimates set out above, 
+        // though the firm hopes to shave 40% off this figure, bringing it down to around 7GJ/tCO2
+        
+        // Assuming 2 MWh elec requirement total per ton, 500 tons per GWh
+        
+        DAC_capacity = 14.0 // GW
+        electricity_for_DAC = 0
+        if (balance>=0.0) {
+            electricity_for_DAC = balance
+            if (electricity_for_DAC>DAC_capacity) electricity_for_DAC = DAC_capacity
+            co2_from_DAC = electricity_for_DAC * 500.0
+            
+            co2_store_level += co2_from_DAC
+            balance -= electricity_for_DAC
+        }
+        total_electricity_for_DAC += electricity_for_DAC
+        data.electricity_for_DAC.push([time,electricity_for_DAC])
         
         // ----------------------------------------------------------------------------
         // Dispatchable (backup power via CCGT gas turbines)
@@ -874,22 +975,41 @@ function fullzcb2_run()
         // ----------------------------------------------------------------------------
         // Methane
         // ----------------------------------------------------------------------------
-        methane_from_hydrogen = hydrogen_to_methanation * methanation_efficiency
-        total_sabatier_losses += hydrogen_to_methanation - methane_from_hydrogen
-        total_anaerobic_digestion_losses += hourly_biomass_for_biogas - methane_from_biogas
+        // direct methane from biogas
+        methane_from_biogas = biogas_supply
         
-        // methane_from_biogas: calculated at start
-        total_methane_made += methane_from_hydrogen + methane_from_biogas
+        // sabatier: methane from co2 content of biogas and hydrogen from electrolysis
+        co2_from_biogas = 107.6 * biogas_supply * 1.26                     // t/GWh
+        
+        co2_from_store = 1780 // tons/hour
+        if (co2_from_store>co2_store_level) co2_from_store = co2_store_level
+        co2_store_level -= co2_from_store
+        
+        co2_for_sabatier = co2_from_biogas + co2_from_store
+        hydrogen_to_methanation = co2_for_sabatier * (8.064/44.009) * 33.3 * 0.001   // 1000 tCO2, requires 183 t H2 = 6.1 GWh
+        methane_from_sabatier = hydrogen_to_methanation * methanation_efficiency
+        
+        // subtract hydrogen methanation demand from hydrogen store
+        hydrogen_SOC -= hydrogen_to_methanation
+        total_hydrogen_to_methanation += hydrogen_to_methanation
+           
+        // losses
+        total_sabatier_losses += hydrogen_to_methanation - methane_from_sabatier
+        total_anaerobic_digestion_losses += hourly_biomass_for_biogas - biogas_supply
+        
+        total_methane_made += methane_from_biogas + methane_from_sabatier
         methane_to_dispatchable = electricity_from_dispatchable / dispatchable_gen_eff
 
         // s1_methane_for_industry: calculated in stage 1
         // s1_methane_for_industryCHP
         methane_for_industryCHP = 0 // MFIX: add this in!!
-        methane_balance = methane_from_hydrogen + methane_from_biogas
+        methane_balance = methane_from_sabatier + methane_from_biogas
         methane_balance -= methane_to_dispatchable
         methane_balance -= s3_methane_for_spacewaterheat[hour]
         methane_balance -= s1_methane_for_industry[hour]
         methane_balance -= methane_for_industryCHP
+        
+        total_methane_demand += methane_to_dispatchable + s3_methane_for_spacewaterheat[hour] + s1_methane_for_industry[hour] + methane_for_industryCHP
         
         s5_methane_SOC.push(methane_SOC)
         data.methane_SOC.push([time,methane_SOC])
@@ -916,12 +1036,14 @@ function fullzcb2_run()
         // ------------------------------------------------------------------------------------
         // Biomass  
         biomass_used = 0
-        biomass_used += methane_from_biogas / anaerobic_digestion_efficiency 
+        biomass_used += biogas_supply / anaerobic_digestion_efficiency 
         biomass_used += s1_biomass_for_industry[hour]
         biomass_used += hourly_biomass_for_biofuel
         biomass_used += s3_biomass_for_spacewaterheat[hour] 
         
         total_biomass_used += biomass_used
+        
+        data.co2_store_level.push([time,co2_store_level])
         
     }
     loading_prc(80,"model stage 5");
@@ -941,6 +1063,7 @@ function fullzcb2_run()
     total_demand += total_industrial_elec_demand
     total_demand += total_industrial_methane_demand
     total_demand += total_industrial_biomass_demand
+    total_demand += total_electricity_for_DAC
     
     total_demand += total_EV_demand
     total_demand += total_elec_trains_demand
@@ -1001,6 +1124,10 @@ function fullzcb2_run()
     
     console.log("max heat elec demand: "+max_heat_demand_elec);
     
+    console.log("total_methane_demand: "+(total_methane_demand/10000));
+    console.log("total_electricity_for_electrolysis: "+(total_electricity_for_electrolysis/10000));
+    console.log("total_hydrogen_to_synth_fuel: "+(total_hydrogen_to_synth_fuel/10000));
+    console.log("total_hydrogen_to_methanation: "+(total_hydrogen_to_methanation/10000));
     primary_energy_factor = total_supply / total_demand
     
     // -------------------------------------------------------------------------------
@@ -1085,7 +1212,7 @@ function fullzcb2_run()
         //}
         
         supply = data.s1_total_variable_supply[hour][1]
-        demand = data.s1_traditional_elec_demand[hour][1] + data.spacewater_elec[hour][1] + data.industry_elec[hour][1] + data.EL_transport[hour][1] + data.electricity_for_electrolysis[hour][1] + data.elec_store_charge[hour][1]
+        demand = data.s1_traditional_elec_demand[hour][1] + data.spacewater_elec[hour][1] + data.industry_elec[hour][1] + data.EL_transport[hour][1] + data.electricity_for_electrolysis[hour][1] + data.elec_store_charge[hour][1] + data.electricity_for_DAC[hour][1]
         balance = (supply + data.unmet_elec[hour][1] + data.electricity_from_dispatchable[hour][1] + data.elec_store_discharge[hour][1]) + data.EV_smart_discharge[hour][1] - demand-data.export_elec[hour][1]
         error += Math.abs(balance)
     } 
@@ -1258,6 +1385,7 @@ function fullzcb2_view(start,end,interval)
             {stack:true, label: "Electric Transport", data:dataout.EL_transport, color:"#aac15b"},
             {stack:true, label: "Elec Store Charge", data:dataout.elec_store_charge, color:"#006a80"},
             {stack:true, label: "Electrolysis", data:dataout.electricity_for_electrolysis, color:"#00aacc"},
+            {stack:true, label: "DAC", data:dataout.electricity_for_DAC, color:"#ccc"},
             {stack:true, label: "Exess", data:dataout.export_elec, color:"#33ccff", lines: {lineWidth:0, fill: 0.4 }},            
             {stack:false, label: "Supply", data:dataout.s1_total_variable_supply, color:"#000000", lines: {lineWidth:0.2, fill: false }}
 
@@ -1274,11 +1402,15 @@ function fullzcb2_view(start,end,interval)
     if (view_mode=="stores")
     {
         $.plot("#placeholder", [
+                /*
                 {stack:true, label: "Battery Store", data:dataout.elecstore_SOC, yaxis:3, color:"#1960d5", lines: {lineWidth:0, fill: 0.8 }},
                 {stack:true, label: "Heat Store", data:dataout.heatstore_SOC, yaxis:3, color:"#cc3311", lines: {lineWidth:0, fill: 0.8 }},
                 {stack:true, label: "BEV Store", data:dataout.BEV_Store_SOC, yaxis:3, color:"#aac15b", lines: {lineWidth:0, fill: 0.8 }},
                 {stack:true, label: "Hydrogen Store", data:dataout.hydrogen_SOC, yaxis:3, color:"#97b5e7", lines: {lineWidth:0, fill: 0.8 }},
                 {stack:true, label: "Methane Store", data:dataout.methane_SOC, yaxis:3, color:"#ccaa00", lines: {lineWidth:0, fill: 0.8 }}
+                */
+                {stack:false, label: "Methane Store", data:dataout.methane_SOC, yaxis:3, color:"#ccaa00", lines: {lineWidth:0, fill: 0.8 }},
+                {stack:false, label: "Hydrogen Store", data:dataout.hydrogen_SOC, yaxis:3, color:"#97b5e7", lines: {lineWidth:0, fill: 0.8 }}
             ], {
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
                 yaxes: [{},{min: 0},{}],
@@ -1314,6 +1446,19 @@ function fullzcb2_view(start,end,interval)
                 {stack:false, label: "Heatstore SOC", data:dataout.heatstore_SOC, yaxis:2, color:"#cc3311", lines: {lineWidth:1, fill: false }},
                 {stack:false, label: "Electric for heat", data:dataout.spacewater_elec, color:"#97b5e7", lines: {lineWidth:0, fill: 0.8 }},
                 {stack:false, label: "Heat Demand", data:dataout.spacewater_balance, yaxis:1, color:"#000", lines: {lineWidth:1, fill: false }}
+            ], {
+                xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
+                yaxes: [{},{min: 0},{}],
+                grid: {hoverable: true, clickable: true},
+                selection: { mode: "x" },
+                legend: {position: "nw"}
+            }
+        );
+    }
+    if (view_mode=="co2")
+    {
+        $.plot("#placeholder", [
+                {stack:false, label: "CO2 Store Level", data:dataout.co2_store_level, yaxis:1, color:"#000", lines: {lineWidth:1, fill: false }}
             ], {
                 xaxis:{mode:"time", min:start, max:end, minTickSize: [1, "hour"]},
                 yaxes: [{},{min: 0},{}],
