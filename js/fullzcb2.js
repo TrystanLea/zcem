@@ -100,14 +100,10 @@ function fullzcb2_init()
     annual_cooking_elec = 26.94
     annual_cooking_biogas = 0.0
     annual_cooking_biomass = 0.0
-    annual_cooking_biogas_CHP = 0.0
-    annual_cooking_biomass_CHP = 0.0
                 
     annual_high_temp_process_elec = 12.80
     annual_high_temp_process_biogas = 36.35
     annual_high_temp_process_biomass = 0.0
-    annual_high_temp_process_biogas_CHP = 0.0
-    annual_high_temp_process_biomass_CHP = 0.0
         
     annual_low_temp_dry_sep_elec = 79.04
     annual_low_temp_dry_sep_biogas = 13.17
@@ -118,8 +114,6 @@ function fullzcb2_init()
     annual_non_heat_process_elec = 78.99
     annual_non_heat_process_biogas = 11.54
     annual_non_heat_process_biomass = 0.0
-    annual_non_heat_process_biogas_CHP = 0.0
-    annual_non_heat_process_biomass_CHP = 0.0
     
     industrial_biofuel = 11.54
     // ---------------------------------------------
@@ -140,7 +134,7 @@ function fullzcb2_init()
     transport_kerosene_demand = 39.27
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
-    biomass_for_biogas = 81.0 //94.0
+    biomass_for_biogas = 38.5 //94.0
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
@@ -152,8 +146,8 @@ function fullzcb2_init()
     elec_store_charge_cap = 10.0
     
     // Hydrogen
-    electrolysis_cap = 35.0
-    electrolysis_eff = 0.7
+    electrolysis_cap = 25.0
+    electrolysis_eff = 0.8
     hydrogen_storage_cap = 20000.0
     minimum_hydrogen_store_level = 0.0
     
@@ -302,14 +296,10 @@ function fullzcb2_run()
     daily_cooking_elec = annual_cooking_elec * 1000.0 / 365.25
     daily_cooking_biogas = annual_cooking_biogas * 1000.0 / 365.25
     daily_cooking_biomass = annual_cooking_biogas * 1000.0 / 365.25
-    daily_cooking_biogas_CHP = annual_cooking_biogas_CHP * 1000.0 / 365.25
-    daily_cooking_biomass_CHP = annual_cooking_biogas_CHP * 1000.0 / 365.25
         
     daily_high_temp_process_elec = annual_high_temp_process_elec * 1000.0 / 365.25
     daily_high_temp_process_biogas = annual_high_temp_process_biogas * 1000.0 / 365.25
     daily_high_temp_process_biomass = annual_high_temp_process_biomass * 1000.0 / 365.25
-    daily_high_temp_process_biogas_CHP = annual_high_temp_process_biogas_CHP * 1000.0 / 365.25
-    daily_high_temp_process_biomass_CHP = annual_high_temp_process_biomass_CHP * 1000.0 / 365.25
 
     daily_low_temp_dry_sep_elec = annual_low_temp_dry_sep_elec * 1000.0 / 365.25
     daily_low_temp_dry_sep_biogas = annual_low_temp_dry_sep_biogas * 1000.0 / 365.25
@@ -320,8 +310,6 @@ function fullzcb2_run()
     daily_non_heat_process_elec = annual_non_heat_process_elec * 1000.0 / 365.25
     daily_non_heat_process_biogas = annual_non_heat_process_biogas * 1000.0 / 365.25
     daily_non_heat_process_biomass = annual_non_heat_process_biomass * 1000.0 / 365.25
-    daily_non_heat_process_biogas_CHP = annual_non_heat_process_biogas_CHP * 1000.0 / 365.25
-    daily_non_heat_process_biomass_CHP = annual_non_heat_process_biomass_CHP * 1000.0 / 365.25
         
     daily_industrial_biofuel = industrial_biofuel * 1000.0 / 365.25
     daily_biomass_for_biofuel = biomass_for_biofuel * 1000.0 / 365.25
@@ -375,7 +363,6 @@ function fullzcb2_run()
     // Stage 1: First run calculates arrays used for second stage in +-12h storage models
     // --------------------------------------------------------------------------------------------------------------
     s1_spacewater_demand_before_heatstore = []
-    s1_balance_before_heat_storage = []
     
     for (var hour = 0; hour < hours; hour++) {
         var capacityfactors = capacityfactors_all[hour]
@@ -448,68 +435,8 @@ function fullzcb2_run()
         
         spacewater_demand_before_heatstore = space_heat_demand + hot_water_demand - geothermal_heat_supply - solarthermal_supply
         s1_spacewater_demand_before_heatstore.push(spacewater_demand_before_heatstore)
-        
-        //balance_before_heat_storage = supply - traditional_elec_demand - (spacewater_demand_before_heatstore/GWth_GWe)
-        //s1_balance_before_heat_storage.push(balance_before_heat_storage)
     }
     loading_prc(40,"model stage 1");
-
-    // ---------------------------------------------------------------------------
-    // Industrial
-    // ---------------------------------------------------------------------------
-    s1_industrial_elec_demand = []
-    s1_methane_for_industry = []
-    s1_biomass_for_industry = []
-    
-    for (var hour = 0; hour < hours; hour++)
-    {
-        var time = datastarttime + (hour * 3600 * 1000);
-        
-        // electric demand
-        cooking_elec = cooking_profile[hour%24] * daily_cooking_elec
-        high_temp_process_elec = high_temp_process_profile[hour%24] * daily_high_temp_process_elec
-        low_temp_process_elec = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_elec
-        non_heat_process_elec = not_heat_process_profile[hour%24] * daily_non_heat_process_elec
-        industrial_elec_demand = cooking_elec + high_temp_process_elec + low_temp_process_elec + non_heat_process_elec
-        s1_industrial_elec_demand.push(industrial_elec_demand)
-        total_industrial_elec_demand += industrial_elec_demand 
-        data.industry_elec.push([time,industrial_elec_demand])
-        
-        // methane demand
-        cooking_biogas = cooking_profile[hour%24] * daily_cooking_biogas
-        high_temp_process_biogas = high_temp_process_profile[hour%24] * daily_high_temp_process_biogas
-        low_temp_process_biogas = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biogas
-        non_heat_process_biogas = not_heat_process_profile[hour%24] * daily_non_heat_process_biogas
-        industrial_methane_demand = cooking_biogas + high_temp_process_biogas + low_temp_process_biogas + non_heat_process_biogas
-        
-        cooking_biogas_CHP = cooking_profile[hour%24] * daily_cooking_biogas_CHP
-        high_temp_process_biogas_CHP = high_temp_process_profile[hour%24] * daily_high_temp_process_biogas_CHP
-        low_temp_process_biogas_CHP = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biogas_CHP
-        non_heat_process_biogas_CHP = not_heat_process_profile[hour%24] * daily_non_heat_process_biogas_CHP
-        industrial_biogas_CHP_demand = cooking_biogas_CHP + high_temp_process_biogas_CHP + low_temp_process_biogas_CHP + non_heat_process_biogas_CHP        
-        
-        s1_methane_for_industry.push(industrial_methane_demand+industrial_biogas_CHP_demand)
-        total_industrial_methane_demand += industrial_methane_demand+industrial_biogas_CHP_demand
-        
-        // biomass demand
-        cooking_biomass = cooking_profile[hour%24] * daily_cooking_biomass
-        high_temp_process_biomass = high_temp_process_profile[hour%24] * daily_high_temp_process_biomass
-        low_temp_process_biomass = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass
-        non_heat_process_biomass = not_heat_process_profile[hour%24] * daily_non_heat_process_biomass
-        industrial_biomass_demand = cooking_biomass + high_temp_process_biomass + low_temp_process_biomass + non_heat_process_biomass
-                
-        cooking_biomass_CHP = cooking_profile[hour%24] * daily_cooking_biomass_CHP
-        high_temp_process_biomass_CHP = high_temp_process_profile[hour%24] * daily_high_temp_process_biomass_CHP
-        low_temp_process_biomass_CHP = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass_CHP
-        non_heat_process_biomass_CHP = not_heat_process_profile[hour%24] * daily_non_heat_process_biomass_CHP
-        industrial_biomass_CHP_demand = cooking_biomass_CHP + high_temp_process_biomass_CHP + low_temp_process_biomass_CHP + non_heat_process_biomass_CHP
-
-        s1_biomass_for_industry.push(industrial_biomass_demand+industrial_biomass_CHP_demand)
-        total_industrial_biomass_demand += industrial_biomass_demand + industrial_biomass_CHP_demand
-        
-        balance_before_heat_storage = data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - (s1_spacewater_demand_before_heatstore[hour] / GWth_GWe)  - industrial_elec_demand
-        s1_balance_before_heat_storage.push(balance_before_heat_storage)
-    }
     
     // --------------------------------------------------------------------------------------------------------------
     // Stage 2: Heatstore
@@ -628,10 +555,63 @@ function fullzcb2_run()
         s3_spacewater_elec_demand.push(spacewater_elec_demand)
         data.spacewater_elec.push([time,spacewater_elec_demand])
         
-        // Balance calculation for BEV storage stage
-        s3_balance_before_BEV_storage.push(data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s1_industrial_elec_demand[hour] - spacewater_elec_demand)
     }
     loading_prc(60,"model stage 3");
+
+    // ---------------------------------------------------------------------------
+    // Industrial
+    // ---------------------------------------------------------------------------
+    s1_industrial_elec_demand = []
+    s1_methane_for_industry = []
+    
+    for (var hour = 0; hour < hours; hour++)
+    {
+        var time = datastarttime + (hour * 3600 * 1000);
+        
+        // electric demand
+        cooking_elec = cooking_profile[hour%24] * daily_cooking_elec
+        non_heat_process_elec = not_heat_process_profile[hour%24] * daily_non_heat_process_elec
+
+        // balance including non DSR industrial load
+        balance = data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s3_spacewater_elec_demand[hour] - cooking_elec - non_heat_process_elec
+
+        // industry elec heat demand
+        high_temp_process_elec = high_temp_process_profile[hour%24] * daily_high_temp_process_elec
+        low_temp_process_elec = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_elec
+        heat_process_elec = high_temp_process_elec + low_temp_process_elec
+        
+        // industry biogas heat demand
+        high_temp_process_biogas = high_temp_process_profile[hour%24] * daily_high_temp_process_biogas
+        low_temp_process_biogas = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biogas
+        heat_process_biogas = high_temp_process_biogas + low_temp_process_biogas
+        
+        // combined heat process demand
+        heat_process = heat_process_elec + heat_process_biogas
+        
+        // DSR
+        heat_process_tmp = heat_process
+        if (heat_process>balance) heat_process = balance
+        if (heat_process<0) heat_process = 0
+        heat_process_shortfall = heat_process_tmp - heat_process
+        
+        industrial_elec_demand = cooking_elec + non_heat_process_elec + heat_process
+        
+        s1_industrial_elec_demand.push(industrial_elec_demand)
+        total_industrial_elec_demand += industrial_elec_demand 
+        data.industry_elec.push([time,industrial_elec_demand])
+        
+        // methane demand
+        cooking_biogas = cooking_profile[hour%24] * daily_cooking_biogas
+        non_heat_process_biogas = not_heat_process_profile[hour%24] * daily_non_heat_process_biogas
+        low_temp_process_biogas_CHP = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biogas_CHP
+        industrial_methane_demand = cooking_biogas + non_heat_process_biogas + low_temp_process_biogas_CHP + heat_process_shortfall
+        
+        s1_methane_for_industry.push(industrial_methane_demand)
+        total_industrial_methane_demand += industrial_methane_demand
+        
+        // Balance calculation for BEV storage stage
+        s3_balance_before_BEV_storage.push(data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s3_spacewater_elec_demand[hour] - industrial_elec_demand)
+    }
     
     // -------------------------------------------------------------------------------------
     // Elec transport
@@ -714,6 +694,7 @@ function fullzcb2_run()
         s4_balance_before_elec_store.push(balance)        
     }
     loading_prc(70,"model stage 4");
+    
     // -------------------------------------------------------------------------------------
     // Elec Store
     // -------------------------------------------------------------------------------------
@@ -915,9 +896,22 @@ function fullzcb2_run()
         
         // ------------------------------------------------------------------------------------
         // Biomass  
+        
+        // Industrial & cooking demand
+        cooking_biomass = cooking_profile[hour%24] * daily_cooking_biomass
+        high_temp_process_biomass = high_temp_process_profile[hour%24] * daily_high_temp_process_biomass
+        low_temp_process_biomass = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass
+        non_heat_process_biomass = not_heat_process_profile[hour%24] * daily_non_heat_process_biomass
+        industrial_biomass_demand = cooking_biomass + high_temp_process_biomass + low_temp_process_biomass + non_heat_process_biomass
+        
+        low_temp_process_biomass_CHP = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass_CHP
+        industrial_biomass_demand += low_temp_process_biomass_CHP
+        
+        total_industrial_biomass_demand += industrial_biomass_demand
+        
         biomass_used = 0
         biomass_used += methane_from_biogas / anaerobic_digestion_efficiency 
-        biomass_used += s1_biomass_for_industry[hour]
+        biomass_used += industrial_biomass_demand
         biomass_used += hourly_biomass_for_biofuel
         biomass_used += s3_biomass_for_spacewaterheat[hour] 
         
