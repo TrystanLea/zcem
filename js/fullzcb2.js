@@ -41,7 +41,10 @@ Issues to fix
 
 function fullzcb2_init()
 {
-    unitsmode = "GW"
+    population_2030 = 70499802
+    households_2030 = 29941701
+    units_mode = "TWhyr"
+    unitsmode = "GW"   
     // ---------------------------------------------------------------------------
     // dataset index:
     // 0:onshore wind, 1:offshore wind, 2:wave, 3:tidal, 4:solar, 5:traditional electricity
@@ -69,15 +72,33 @@ function fullzcb2_init()
     geothermal_heat_cf = 0.9
     // ---------------------------------------------    
     // Traditional electricity demand
-    prc_reduction_traditional_demand = 100*0.74823
+    // column 5 trad elec demand: 331.033 TWh/yr, normalised and scaled to:
+    
+    trad_elec_domestic_appliances = 38.59 // TWh/yr (45% of 2007 figure, does not include cooking)
+    trad_elec_services_appliances = 41.41 // TWh/yr
+    trad_elec_services_cooling = 4.55     // TWh/yr
     
     // ---------------------------------------------
     // Space & water heating demand
     // ---------------------------------------------
-    specific_space_heat_demand = 4.398                // GW/K
-    space_heat_base_temperature = 16.0-(385.0/119.0)  // 12.8 K
-    water_heating = 95.84;                            // GWh
+    // domestic simple house model
+    total_floor_area = 85 // m2
+    storey_height = 2.2
+    wall_ins_thickness = 0.2
+    floor_ins_thickness = 0.2
+    loft_ins_thickness = 0.3
+    window_type = 3
+    glazing_extent = 0.2
+    air_change_per_hour = 1.0
     
+    domestic_space_heat_demand_WK = 114.6 // W/K (DECC 2050 Pathway level 4) x number of households 2030 = 3.548 GW/K
+    services_space_heat_demand_GWK = 1.486 // GW/K
+    industry_space_heat_demand_GWK = 0.502 // GW/K
+    space_heat_base_temperature = 13.07               // Uses 16.7°C as average internal temp. and gains & losses from DECC 2050
+    
+    domestic_water_heating = 40.80 // TWh
+    services_water_heating = 15.99 // TWh
+        
     // Heating system efficiencies
     heatpump_COP = 3.0
     elres_efficiency = 1.0
@@ -97,44 +118,44 @@ function fullzcb2_init()
     // ---------------------------------------------
     // Industrial & cooking
     // ---------------------------------------------
-    annual_cooking_elec = 26.94
+    annual_cooking_elec = 27.32
     annual_cooking_biogas = 0.0
     annual_cooking_biomass = 0.0
                 
-    annual_high_temp_process_elec = 12.80
-    annual_high_temp_process_biogas = 36.35
+    annual_high_temp_process_elec = 12.90
+    annual_high_temp_process_biogas = 36.11
     annual_high_temp_process_biomass = 0.0
         
-    annual_low_temp_dry_sep_elec = 79.04
-    annual_low_temp_dry_sep_biogas = 13.17
+    annual_low_temp_dry_sep_elec = 78.52
+    annual_low_temp_dry_sep_biogas = 13.09
     annual_low_temp_dry_sep_biomass = 0.0
     annual_low_temp_dry_sep_biogas_CHP = 0.0
-    annual_low_temp_dry_sep_biomass_CHP = 26.35
+    annual_low_temp_dry_sep_biomass_CHP = 26.17
             
-    annual_non_heat_process_elec = 78.99
-    annual_non_heat_process_biogas = 11.54
-    annual_non_heat_process_biomass = 0.0
+    annual_non_heat_process_elec = 88.00
+    annual_non_heat_process_biogas = 13.44
+    annual_non_heat_process_biomass = 5.58
     
-    industrial_biofuel = 11.54
+    industrial_biofuel = 13.44
     // ---------------------------------------------
     // Transport
     // ---------------------------------------------
-    electrains_demand = 10.8
+    electrains_demand = 12.22 // and ships?
     
     // Electric cars
-    BEV_demand = 31.29
-    electric_car_battery_capacity = 294.75    // GWh
-    electric_car_max_charge_rate = 42.11      // GW
+    BEV_demand = 49.53
+    electric_car_battery_capacity = 513.0    // GWh
+    electric_car_max_charge_rate = 73.3      // GW
     smart_charging_enabled = 1
     
     // H2 and synthetic fuels
-    transport_H2_demand = 13.87
+    transport_H2_demand = 9.61
     transport_CH4_demand = 0.0
-    transport_biofuels_demand = 59.13
-    transport_kerosene_demand = 39.27
+    transport_biofuels_demand = 33.45
+    transport_kerosene_demand = 40.32
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
-    biomass_for_biogas = 38.5 //94.0
+    biomass_for_biogas = 50.0 //94.0
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
@@ -168,7 +189,9 @@ function fullzcb2_init()
     
     hot_water_profile = [0.00093739, 0.00093739, 0.00093739, 0.005002513, 0.015325386, 0.034557134, 0.075528659, 0.10242465, 0.112118681, 0.068802784, 0.046286663, 0.030023072, 0.019077393, 0.019077393, 0.021108649, 0.029555111, 0.069742295, 0.077562688, 0.071150746, 0.058327514, 0.044879681, 0.037216907, 0.032212599, 0.027207312];
 
-    space_heat_profile = [0.008340899, 0.008340899, 0.008340899, 0.008340866, 0.016680908, 0.06511456, 0.076803719, 0.083470637, 0.0751301, 0.06009123, 0.04593692, 0.040060611, 0.0350685, 0.033362773, 0.033394683, 0.034247234, 0.036743141, 0.040881845, 0.05175043, 0.06264997, 0.064292437, 0.060849104, 0.04176657, 0.008341064];
+    // space_heat_profile = [0.008340899, 0.008340899, 0.008340899, 0.008340866, 0.016680908, 0.06511456, 0.076803719, 0.083470637, 0.0751301, 0.06009123, 0.04593692, 0.040060611, 0.0350685, 0.033362773, 0.033394683, 0.034247234, 0.036743141, 0.040881845, 0.05175043, 0.06264997, 0.064292437, 0.060849104, 0.04176657, 0.008341064];
+
+    space_heat_profile = [0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667, 0.041666667];
 
     elec_trains_use_profile = [0.004268293, 0.002439024, 0.001829268, 0.001219512, 0.003658536, 0.009756097, 0.025609755, 0.061585364, 0.054878047, 0.048780486, 0.058536584, 0.066463413, 0.07317073, 0.065853657, 0.07317073, 0.082317071, 0.077439022, 0.079268291, 0.067073169, 0.051219511, 0.038414633, 0.02804878, 0.015853658, 0.009146341];
     
@@ -184,6 +207,113 @@ function fullzcb2_init()
     
     BEV_plugged_in_profile = [0.873684211, 0.889473684, 0.894736842, 0.9, 0.878947368, 0.826315789, 0.689473684, 0.378947368, 0.436842105, 0.489473684, 0.405263158, 0.336842105, 0.278947368, 0.342105263, 0.278947368, 0.2, 0.242105263, 0.226315789, 0.331578947, 0.468421053, 0.578947368, 0.668421053, 0.773684211, 0.831578947];
 
+    // -----------------------------------------------------------------------------
+    // Transport detailed calculation
+    // -----------------------------------------------------------------------------
+    /*
+    travel_reduction = 0.2
+    km_per_mile = 1.609344
+    km_per_person_2007 = 14104
+    
+    modes = {}
+    modes["2007"] = {walking:0.02168,cycling:0.00508,ebikes:0.00000,rail:0.0701,bus:0.05963,aviation:0.0141,motorbike:0.0069,carsvans:0.8252}
+    modes["2017"] = {walking:0.02565,cycling:0.00634,ebikes:0.00000,rail:0.09677,bus:0.0458,aviation:0.0111,motorbike:0.00583,carsvans:0.80856}
+    modes["2030"] = {walking:0.02543,cycling:0.02476,ebikes:0.02161,rail:0.1152,bus:0.1637,aviation:0.0038,motorbike:0.0262,carsvans:0.6193}
+
+    year = "2030"
+    modes_walking = modes[year].walking
+    modes_cycling = modes[year].cycling
+    modes_ebikes = modes[year].ebikes
+    modes_rail = modes[year].rail
+    modes_bus = modes[year].bus
+    modes_aviation = modes[year].aviation
+    modes_motorbike = modes[year].motorbike
+    modes_carsvans = modes[year].carsvans
+    
+    // Walking, cycling and ebikes
+    ebikes_kwh_vehicle_km = 0.01
+
+    // Rail
+    occupancy_rail = 0.5 // %
+    rail_kwh_vehicle_km_EV = 0.027 // kWh/km.p
+    rail_kwh_vehicle_km_H2 = 0.068 // kWh/km.p
+    rail_kwh_vehicle_km_PD = 0.09  // kWh/km.p
+    rail_kwh_vehicle_km_CH4 = 0.09 // kWh/km.p
+    rail_prc_EV = 0.7
+    rail_prc_H2 = 0.1
+    rail_prc_PD = 0.1
+    rail_prc_CH4 = 0.1
+    // Bus ~ 31 up to 87 person, average ~ 59 person??
+    occupancy_bus = 0.25 // %
+    bus_kwh_vehicle_km_EV = 1.3/60.0  // BYD K9 1.3 kWh/km 250km range 324 kWh battery 31 seats, protera 35 + 18 standing
+    bus_kwh_vehicle_km_H2 = 3.25/60.0 
+    bus_kwh_vehicle_km_PD = 4.0/60.0  // 6.74 mpg 87 max both decks london bus
+    bus_kwh_vehicle_km_CH4 = 4.0/60.0 // 6.74 mpg
+    bus_prc_EV = 0.7
+    bus_prc_H2 = 0.0
+    bus_prc_PD = 0.1
+    bus_prc_CH4 = 0.2
+    // Aviation
+    occupancy_aviation = 0.85 // %
+    aviation_kwh_vehicle_km_EV = 0.078     // eviation, alice 650 miles on 900 kWh (9 pax+2), 0.861 kWh/km, 0.078 kWh/pkm
+    aviation_kwh_vehicle_km_H2 = 0.196     // eviation H2,                                    2.153 kWh/km, 0.196 kWh/pkm
+    aviation_kwh_vehicle_km_PD = 0.370     // 37 kWh per 100p-km                                            0.370 kWh/pkm
+    aviation_kwh_vehicle_km_CH4 = 0.370
+    aviation_prc_EV = 0.1
+    aviation_prc_H2 = 0.0
+    aviation_prc_PD = 0.9
+    aviation_prc_CH4 = 0.0
+    // Motorbikes
+    occupancy_motorbike = 1.1
+    motorbike_kwh_vehicle_km_EV = 0.085     // 
+    motorbike_kwh_vehicle_km_H2 = 0.213     // 0.186
+    motorbike_kwh_vehicle_km_PD = 0.343     // 80mpg seems typical = 0.343 kWh/km
+    motorbike_kwh_vehicle_km_CH4 = 0.343
+    motorbike_prc_EV = 0.9
+    motorbike_prc_H2 = 0.0
+    motorbike_prc_PD = 0.1
+    motorbike_prc_CH4 = 0.0
+    // cars vans
+    occupancy_carsvans = 2.0 // out of 5
+    carsvans_kwh_vehicle_km_EV = 0.170     // 
+    carsvans_kwh_vehicle_km_H2 = 0.425     // 0.186
+    carsvans_kwh_vehicle_km_PD = 0.550     // 0.390 55mpg 0.497 kWh/km, 50mpg:0.550 kWh/km
+    carsvans_kwh_vehicle_km_CH4 = 0.550
+    carsvans_prc_EV = 0.9
+    carsvans_prc_H2 = 0.04
+    carsvans_prc_PD = 0.06
+    carsvans_prc_CH4 = 0.0
+    // rail freight
+    rail_freight_bn_ton_km = 21.0*2.17  // average 2007 0.115 kWh/ton.km
+    rail_freight_kwh_ton_km_EV = 0.035  // 0.115 * 30% efficient
+    rail_freight_kwh_ton_km_H2 = 0.070  // 50%
+    rail_freight_kwh_ton_km_PD = 0.115  // 30%
+    rail_freight_kwh_ton_km_CH4 = 0.115 // 30%
+    rail_freight_prc_EV = 0.3
+    rail_freight_prc_H2 = 0.1
+    rail_freight_prc_PD = 0.4
+    rail_freight_prc_CH4 = 0.2
+    // Road freight
+    road_freight_bn_ton_km = 157.0*0.81       // average 2007 0.558 kWh/ton.km
+    road_freight_kwh_ton_km_EV = 0.060/0.75   // mid range between small (0.09) and semi (0.03) + part load
+    road_freight_kwh_ton_km_H2 = 0.120/0.75   // 50%
+    road_freight_kwh_ton_km_PD = 0.200/0.75   // 30%
+    road_freight_kwh_ton_km_CH4 = 0.200/0.75  // 30%
+    road_freight_prc_EV = 0.3
+    road_freight_prc_H2 = 0.1
+    road_freight_prc_PD = 0.4
+    road_freight_prc_CH4 = 0.2
+    // National navigation
+    nat_navigation_prc_EV = 0.5
+    nat_navigation_prc_PD = 0.5
+    nat_navigation_TWh = 6.18 // 18.817 * 0.49 * 0.67
+    // International shipping
+    int_shipping_prc_EV = 0.25
+    int_shipping_prc_PD = 0.75
+    int_shipping_TWh = 9.55 // 29.08 * 0.49 * 0.67
+    // International aviation
+    int_aviation_TWh = 39.27 // 153 * 1/3 * 0.77     
+    */
 }
 
 function fullzcb2_run()
@@ -204,6 +334,174 @@ function fullzcb2_run()
     total_biomass_used = 0
     total_supply = 0
     total_ambient_heat_supply = 0
+
+  
+    prc_reduction_domestic_appliances = 1.0 - (trad_elec_domestic_appliances / 86.0)
+    prc_reduction_services_appliances = 1.0 - (trad_elec_services_appliances / 59.0)
+    prc_reduction_services_cooling = 1.0 - (trad_elec_services_cooling / 9.0)
+    
+    domestic_appliances_kwh = trad_elec_domestic_appliances * 1000000000.0 / households_2030
+    trad_elec_demand = trad_elec_domestic_appliances + trad_elec_services_appliances + trad_elec_services_cooling 
+    // ---------------------------------------------------------------------------------------------  
+    // Building energy model (domestic only)
+    // ---------------------------------------------------------------------------------------------
+    // 3. Solar gains calculator from window areas and orientations
+    // 4. Seperate out cooking, lighting and appliances and water heating demand.
+    
+    floor_area = total_floor_area / 2.0 
+    side = Math.sqrt(floor_area)
+         
+    walls_uvalue = 1/((1/1.5)+(1/(0.03/wall_ins_thickness))) // Base U-value is uninsulated cavity wall
+    floor_uvalue = 1/((1/0.7)+(1/(0.04/floor_ins_thickness))) // Base U-value is uninsulated solid floor
+    loft_uvalue = 1/((1/2.0)+(1/(0.03/loft_ins_thickness))) // Base U-value is uninsulated loft
+    
+    if (window_type==1) window_uvalue = 4.8 // single
+    if (window_type==2) window_uvalue = 1.9 // double
+    if (window_type==3) window_uvalue = 1.3 // triple
+
+    total_wall_area = (side * storey_height * 2) * 4
+    total_window_area = total_wall_area * glazing_extent
+    
+    windows_south = total_window_area * 0.4
+    windows_west = total_window_area * 0.2
+    windows_east = total_window_area * 0.2
+    windows_north = total_window_area * 0.2
+    
+    solar_gains_capacity = total_window_area / 3.0
+
+    floor_WK = floor_uvalue * floor_area
+    loft_WK = loft_uvalue * floor_area
+    
+    wall_south_WK = walls_uvalue * ((side * storey_height * 2) - windows_south)
+    wall_west_WK = walls_uvalue * ((side * storey_height * 2) - windows_west)
+    wall_east_WK = walls_uvalue * ((side * storey_height * 2) - windows_east)
+    wall_north_WK = walls_uvalue * ((side * storey_height * 2) - windows_north)
+    
+    window_WK = (windows_south + windows_west + windows_east + windows_north) * window_uvalue
+    
+    fabric_WK = floor_WK + loft_WK + wall_south_WK + wall_west_WK + wall_east_WK + wall_north_WK + window_WK
+    
+    building_volume = floor_area * storey_height * 2.0
+    infiltration_WK = 0.33 * air_change_per_hour * building_volume
+    
+    domestic_space_heat_demand_WK = fabric_WK + infiltration_WK
+    // ---------------------------------------------------------------------------------------------    
+    // ---------------------------------------------------------------------------------------------
+    domestic_space_heat_demand_GWK = (domestic_space_heat_demand_WK * households_2030) / 1000000000.0
+    space_heat_demand_GWK = domestic_space_heat_demand_GWK + services_space_heat_demand_GWK + industry_space_heat_demand_GWK
+    water_heating = domestic_water_heating + services_water_heating
+    
+    domestic_water_heating_kwh = domestic_water_heating * 1000000000.0 / households_2030
+    prc_reduction_domestic_water_heating = 1.0 - (domestic_water_heating / 71.0)
+    prc_reduction_services_water_heating = 1.0 - (services_water_heating / 16.0)
+
+    // ---------------------------------------------------------------------------------------------
+    // Detailed transport model
+    // ---------------------------------------------------------------------------------------------    
+    // Using Total for UK from DECC 2050 Pathways
+    /*
+    domestic_passenger_total = km_per_person_2007 * population_2030
+    domestic_passenger_total *= (1-travel_reduction)
+        
+    // Walking, cycling and ebike
+    walking_km = domestic_passenger_total * modes_walking
+    walking_km_pp = walking_km / population_2030
+    cycling_km = domestic_passenger_total * modes_cycling
+    cycling_km_pp = cycling_km / population_2030
+    ebikes_km = domestic_passenger_total * modes_ebikes
+    ebikes_km_pp = ebikes_km / population_2030
+    ebikes_TWh = ebikes_km * ebikes_kwh_vehicle_km / 1000000000
+    // Train
+    rail_km = domestic_passenger_total * modes_rail / occupancy_rail
+    rail_km_pp = domestic_passenger_total * modes_rail / population_2030
+    rail_EV_TWh = rail_prc_EV * rail_km * rail_kwh_vehicle_km_EV / 1000000000
+    rail_H2_TWh = rail_prc_H2 * rail_km * rail_kwh_vehicle_km_H2 / 1000000000
+    rail_PD_TWh = rail_prc_PD * rail_km * rail_kwh_vehicle_km_PD / 1000000000
+    rail_CH4_TWh = rail_prc_CH4 * rail_km * rail_kwh_vehicle_km_CH4 / 1000000000
+    // Bus
+    bus_km = domestic_passenger_total * modes_bus / occupancy_bus
+    bus_km_pp = domestic_passenger_total * modes_bus / population_2030
+    bus_EV_TWh = bus_prc_EV * bus_km * bus_kwh_vehicle_km_EV / 1000000000
+    bus_H2_TWh = bus_prc_H2 * bus_km * bus_kwh_vehicle_km_H2 / 1000000000
+    bus_PD_TWh = bus_prc_PD * bus_km * bus_kwh_vehicle_km_PD / 1000000000
+    bus_CH4_TWh = bus_prc_CH4 * bus_km * bus_kwh_vehicle_km_CH4 / 1000000000
+    // Aviation
+    aviation_km = domestic_passenger_total * modes_aviation / occupancy_aviation
+    aviation_km_pp = domestic_passenger_total * modes_aviation / population_2030
+    aviation_EV_TWh = aviation_prc_EV * aviation_km * aviation_kwh_vehicle_km_EV / 1000000000
+    aviation_H2_TWh = aviation_prc_H2 * aviation_km * aviation_kwh_vehicle_km_H2 / 1000000000
+    aviation_PD_TWh = aviation_prc_PD * aviation_km * aviation_kwh_vehicle_km_PD / 1000000000
+    aviation_CH4_TWh = aviation_prc_CH4 * aviation_km * aviation_kwh_vehicle_km_CH4 / 1000000000
+    // Motorbikes
+    motorbike_km = domestic_passenger_total * modes_motorbike / occupancy_motorbike
+    motorbike_km_pp = domestic_passenger_total * modes_motorbike / population_2030
+    motorbike_EV_TWh = motorbike_prc_EV * motorbike_km * motorbike_kwh_vehicle_km_EV / 1000000000
+    motorbike_H2_TWh = motorbike_prc_H2 * motorbike_km * motorbike_kwh_vehicle_km_H2 / 1000000000
+    motorbike_PD_TWh = motorbike_prc_PD * motorbike_km * motorbike_kwh_vehicle_km_PD / 1000000000
+    motorbike_CH4_TWh = motorbike_prc_CH4 * motorbike_km * motorbike_kwh_vehicle_km_CH4 / 1000000000
+    // Cars & Vans
+    carsvans_km = domestic_passenger_total * modes_carsvans / occupancy_carsvans
+    carsvans_km_pp = domestic_passenger_total * modes_carsvans / population_2030
+    carsvans_EV_TWh = carsvans_prc_EV * carsvans_km * carsvans_kwh_vehicle_km_EV / 1000000000
+    carsvans_H2_TWh = carsvans_prc_H2 * carsvans_km * carsvans_kwh_vehicle_km_H2 / 1000000000
+    carsvans_PD_TWh = carsvans_prc_PD * carsvans_km * carsvans_kwh_vehicle_km_PD / 1000000000
+    carsvans_CH4_TWh = carsvans_prc_CH4 * carsvans_km * carsvans_kwh_vehicle_km_CH4 / 1000000000
+    // Totals
+    transport_electric_TWh = ebikes_TWh + rail_EV_TWh + bus_EV_TWh + aviation_EV_TWh + motorbike_EV_TWh + carsvans_EV_TWh
+    transport_hydrogen_TWh = rail_H2_TWh + bus_H2_TWh + aviation_H2_TWh + motorbike_H2_TWh + carsvans_H2_TWh
+    transport_liquid_TWh = rail_PD_TWh + bus_PD_TWh + aviation_PD_TWh + motorbike_PD_TWh + carsvans_PD_TWh
+    transport_methane_TWh = rail_CH4_TWh + bus_CH4_TWh + aviation_CH4_TWh + motorbike_CH4_TWh + carsvans_CH4_TWh    
+    // Rail Freight
+    rail_freight_EV_TWh = rail_freight_prc_EV * rail_freight_bn_ton_km * rail_freight_kwh_ton_km_EV
+    rail_freight_H2_TWh = rail_freight_prc_H2 * rail_freight_bn_ton_km * rail_freight_kwh_ton_km_H2
+    rail_freight_PD_TWh = rail_freight_prc_PD * rail_freight_bn_ton_km * rail_freight_kwh_ton_km_PD
+    rail_freight_CH4_TWh = rail_freight_prc_CH4 * rail_freight_bn_ton_km * rail_freight_kwh_ton_km_CH4
+    // Road Freight
+    road_freight_EV_TWh = road_freight_prc_EV * road_freight_bn_ton_km * road_freight_kwh_ton_km_EV
+    road_freight_H2_TWh = road_freight_prc_H2 * road_freight_bn_ton_km * road_freight_kwh_ton_km_H2
+    road_freight_PD_TWh = road_freight_prc_PD * road_freight_bn_ton_km * road_freight_kwh_ton_km_PD
+    road_freight_CH4_TWh = road_freight_prc_CH4 * road_freight_bn_ton_km * road_freight_kwh_ton_km_CH4
+    // National navigation
+    nat_navigation_TWh_EV = nat_navigation_TWh * nat_navigation_prc_EV
+    nat_navigation_TWh_PD = nat_navigation_TWh * nat_navigation_prc_PD
+    // International shipping
+    int_shipping_TWh_EV = int_shipping_TWh * int_shipping_prc_EV
+    int_shipping_TWh_PD = int_shipping_TWh * int_shipping_prc_PD
+    // International aviation
+    int_aviation_TWh_PD = int_aviation_TWh
+    // Totals
+    transport_electric_TWh += rail_freight_EV_TWh + road_freight_EV_TWh + nat_navigation_TWh_EV + int_shipping_TWh_EV
+    transport_hydrogen_TWh += rail_freight_H2_TWh + road_freight_H2_TWh 
+    transport_liquid_TWh += rail_freight_PD_TWh + road_freight_PD_TWh + nat_navigation_TWh_PD + int_shipping_TWh_PD + int_aviation_TWh_PD
+    transport_methane_TWh += rail_freight_CH4_TWh + road_freight_CH4_TWh
+
+    // Map to hourly model
+    electrains_demand = rail_EV_TWh + rail_freight_EV_TWh
+    BEV_demand = transport_electric_TWh - electrains_demand
+    transport_H2_demand = transport_hydrogen_TWh
+    transport_CH4_demand = transport_methane_TWh
+    
+    transport_kerosene_demand = aviation_PD_TWh + int_aviation_TWh_PD
+    transport_biofuels_demand = transport_liquid_TWh - transport_kerosene_demand
+    biomass_for_biofuel = (transport_liquid_TWh + industrial_biofuel)*1.3 // 143.0
+    transport_bioliquid_demand = transport_liquid_TWh
+    */
+    
+    // ---------------------------------------------------------------------------------------------    
+    // Hourly model totals
+    // ---------------------------------------------------------------------------------------------  
+    total_domestic_space_heat_demand = 0
+    total_services_space_heat_demand = 0
+    total_industry_space_heat_demand = 0
+    total_space_heat_demand = 0
+    
+    total_water_heat_demand = 0
+    total_unmet_heat_demand = 0
+    unmet_heat_demand_count = 0
+    total_biomass_for_spacewaterheat_loss = 0
+    total_methane_for_spacewaterheat_loss = 0
+    total_heat_spill = 0
+    max_heat_demand_elec = 0 
     
     // ---------------------------------------------
     // Store SOC's
@@ -231,17 +529,6 @@ function fullzcb2_run()
     unmet_hydrogen_demand = 0
 
     transport_bioliquid_demand = transport_biofuels_demand + transport_kerosene_demand
-
-    // ---------------------------------------------
-    // Heat
-    // ---------------------------------------------
-    total_space_heat_demand = 0
-    total_unmet_heat_demand = 0
-    unmet_heat_demand_count = 0
-    total_biomass_for_spacewaterheat_loss = 0
-    total_methane_for_spacewaterheat_loss = 0
-    total_heat_spill = 0
-    max_heat_demand_elec = 0
     
     // --------------------------------------------- 
     // Final balance
@@ -262,6 +549,7 @@ function fullzcb2_run()
     total_methane_made = 0
     total_electricity_from_dispatchable = 0
     max_dispatchable_capacity = 0
+    total_methane_for_transport = 0
     
     // demand totals
     total_traditional_elec = 0
@@ -279,10 +567,12 @@ function fullzcb2_run()
     total_synth_fuel_demand = 0
     methane_store_vented = 0
     
-    change_traditional_demand = 1.0 - (prc_reduction_traditional_demand/100)
     // ---------------------------------------------
     // Convert to daily demand, used with daily usage profiles
     // ---------------------------------------------
+    
+    daily_trad_elec_demand = trad_elec_demand * 1000.0 / 365.25
+    
     water_heating_daily_demand = water_heating * 1000.0 / 365.25    
     
     daily_BEV_demand = BEV_demand * 1000.0 / 365.25
@@ -349,7 +639,7 @@ function fullzcb2_run()
     // move to hourly model if needed
     heatpump_COP_hourly = heatpump_COP
     GWth_GWe = (heatpump_COP_hourly * spacewater_share_heatpumps) + (elres_efficiency * spacewater_share_elres) + (methane_boiler_efficiency * spacewater_share_methane)
-
+    
     var capacityfactors_all = [];
     for (var hour = 0; hour < hours; hour++) {
         var capacityfactors = tenyearsdatalines[hour].split(",");
@@ -409,7 +699,9 @@ function fullzcb2_run()
         // ---------------------------------------------------------------------------
         // Traditional electricity demand
         // ---------------------------------------------------------------------------
-        traditional_elec_demand = capacityfactors[5] * change_traditional_demand
+        normalised_trad_elec = capacityfactors[5]/331.033
+        traditional_elec_demand = normalised_trad_elec * trad_elec_demand
+        
         data.s1_traditional_elec_demand.push([time,traditional_elec_demand])
         total_traditional_elec += traditional_elec_demand
         // ---------------------------------------------------------------------------
@@ -418,12 +710,23 @@ function fullzcb2_run()
         // space heat
         degree_hours = space_heat_base_temperature - temperature
         if (degree_hours<0) degree_hours = 0
-        space_heat_demand = degree_hours * specific_space_heat_demand * 24.0 * space_heat_profile[hour%24]
+        
+        // Domestic space heat
+        domestic_space_heat_demand = degree_hours * domestic_space_heat_demand_GWK * 24.0 * space_heat_profile[hour%24]
+        total_domestic_space_heat_demand += domestic_space_heat_demand
+        // Services space heat        
+        services_space_heat_demand = degree_hours * services_space_heat_demand_GWK * 24.0 * space_heat_profile[hour%24]
+        total_services_space_heat_demand += services_space_heat_demand
+        // Industry space heat        
+        industry_space_heat_demand = degree_hours * industry_space_heat_demand_GWK * 24.0 * space_heat_profile[hour%24]        
+        total_industry_space_heat_demand += industry_space_heat_demand
+        // Combined space heat         
+        space_heat_demand = domestic_space_heat_demand + services_space_heat_demand + industry_space_heat_demand
         total_space_heat_demand += space_heat_demand
         
         // water heat
         hot_water_demand = hot_water_profile[hour%24] * water_heating_daily_demand
-        total_space_heat_demand += hot_water_demand       
+        total_water_heat_demand += hot_water_demand       
         
         // solar thermal
         solarthermal_supply = solarthermal_capacity * capacityfactors[4]
@@ -436,6 +739,14 @@ function fullzcb2_run()
         spacewater_demand_before_heatstore = space_heat_demand + hot_water_demand - geothermal_heat_supply - solarthermal_supply
         s1_spacewater_demand_before_heatstore.push(spacewater_demand_before_heatstore)
     }
+    
+    domestic_space_heating_kwh = total_domestic_space_heat_demand*0.1*1000000 / households_2030
+    
+    prc_reduction_domestic_space_heat_demand = 1.0 - ((total_domestic_space_heat_demand*0.0001) / 266.0)
+    prc_reduction_services_space_heat_demand = 1.0 - ((total_services_space_heat_demand*0.0001) / 83.0)
+    prc_reduction_industry_space_heat_demand = 1.0 - ((total_industry_space_heat_demand*0.0001) / 28.0)
+    prc_reduction_space_heat_demand = 1.0 - ((total_space_heat_demand*0.0001) / (266.0+83.0+28.0))
+    
     loading_prc(40,"model stage 1");
     
     // --------------------------------------------------------------------------------------------------------------
@@ -863,6 +1174,8 @@ function fullzcb2_run()
         total_methane_made += methane_from_hydrogen + methane_from_biogas
         methane_to_dispatchable = electricity_from_dispatchable / dispatchable_gen_eff
 
+        methane_for_transport = daily_transport_CH4_demand / 24.0
+        total_methane_for_transport += methane_for_transport
         // s1_methane_for_industry: calculated in stage 1
         // s1_methane_for_industryCHP
         methane_for_industryCHP = 0 // MFIX: add this in!!
@@ -871,6 +1184,7 @@ function fullzcb2_run()
         methane_balance -= s3_methane_for_spacewaterheat[hour]
         methane_balance -= s1_methane_for_industry[hour]
         methane_balance -= methane_for_industryCHP
+        methane_balance -= methane_for_transport
         
         s5_methane_SOC.push(methane_SOC)
         data.methane_SOC.push([time,methane_SOC])
@@ -932,6 +1246,7 @@ function fullzcb2_run()
     total_demand = 0
     total_demand += total_traditional_elec 
     total_demand += total_space_heat_demand
+    total_demand += total_water_heat_demand
     total_demand += total_industrial_elec_demand
     total_demand += total_industrial_methane_demand
     total_demand += total_industrial_biomass_demand
@@ -939,7 +1254,7 @@ function fullzcb2_run()
     total_demand += total_EV_demand
     total_demand += total_elec_trains_demand
     total_demand += total_hydrogen_for_hydrogen_vehicles
-    total_demand += transport_CH4_demand*10000.0
+    total_demand += total_methane_for_transport
     total_demand += total_synth_fuel_demand
     
     // -------------------------------------------------------------------------------------------------
@@ -1019,47 +1334,6 @@ function fullzcb2_run()
     methane_store_full_prc = 100*methane_store_full_count / hours
     hydrogen_store_empty_prc = 100*hydrogen_store_empty_count / hours
     hydrogen_store_full_prc = 100*hydrogen_store_full_count / hours
-      
-    // ----------------------------------------------------------------------------
-    // Tests
-    // ----------------------------------------------------------------------------
-    // 1. Test definition
-    var tests = {
-      "s3_heatstore_SOC": {testdataindex:1},
-      "s4_BEV_Store_SOC": {testdataindex:2},
-      "s5_elecstore_SOC": {testdataindex:3},
-      "s5_hydrogen_SOC": {testdataindex:4},
-      "s5_methane_SOC": {testdataindex:5},
-      "s5_final_balance": {testdataindex:6}
-    }
-    // 2. Test init
-    for (var z in tests) {
-        tests[z].max_error = 0.0
-        tests[z].sum_error = 0.0
-        tests[z].sum = 0.0
-    }
-    // 3. Error calculation
-    for (var hour = 0; hour < hours; hour++) {
-        var test = testlines[hour].split(",");
-        
-        for (var z in tests) {
-            var testval = parseFloat(test[tests[z].testdataindex]);
-            error = Math.abs(window[z][hour] - testval);
-            if (error>tests[z].max_error) tests[z].max_error = error;
-            tests[z].sum_error += error
-        }
-    }
-    // 4. Test output
-    var out = "";
-    for (var z in tests) {
-    if (tests[z].sum_error/hours<0.1) status = "success"; else status = "error";
-        out += "<div class='alert alert-"+status+"'><b>"+status+":</b> "+z+" (mean:"+(tests[z].sum_error/hours).toFixed(4)+", max:"+tests[z].max_error.toFixed(2)+")</div>";
-    }
-    
-    $("#tests").html(out);
-    loading_prc(90,"tests");
-    
-    // Output
     
     var out = "";
     var error = 0
@@ -1165,6 +1439,19 @@ function fullzcb2_run()
     // Energy stacks visualisation definition
     var scl = 1.0/10000.0;
     var units = "TWh/yr";
+    
+    if (units_mode=="kwhdperperson") {
+        units = "kWh/d.p"
+        // GWh converted to kWh x 1000 x 1000, per day divide by 365 & 10 years
+        scl = (1000.0*1000.0) / (10*365.0*population_2030)
+    }
+    
+    if (units_mode=="kwhdperhousehold") {
+        units = "kWh/d.h"
+        // GWh converted to kWh x 1000 x 1000, per day divide by 365 & 10 years
+        scl = (1000.0*1000.0) / (10*365.0*households_2030)
+    }
+    
     var stacks = [
       {"name":"Supply","height":(total_supply+total_unmet_demand)*scl,"saving":0,
         "stack":[
@@ -1184,7 +1471,7 @@ function fullzcb2_run()
           {"kwhd":total_geothermal_elec*scl,"name":"Geo Thermal Elec","color":1},
           {"kwhd":total_geothermal_heat*scl,"name":"Geo Thermal Heat","color":1},
           {"kwhd":total_nuclear_supply*scl,"name":"Nuclear","color":1},
-          {"kwhd":total_biomass_used,"name":"Biomass","color":1},
+          {"kwhd":10000*total_biomass_used*scl,"name":"Biomass","color":1},
           {"kwhd":total_ambient_heat_supply*scl,"name":"Ambient","color":1},
           {"kwhd":total_unmet_demand*scl,"name":"Unmet","color":3}
         ]
@@ -1201,17 +1488,18 @@ function fullzcb2_run()
       {"name":"Demand","height":(total_demand+total_losses)*scl,"saving":0,
         "stack":[
           {"kwhd":total_traditional_elec*scl,"name":"Trad Elec","color":0},
-          {"kwhd":total_space_heat_demand*scl,"name":"Space & Water","color":0},
+          {"kwhd":total_space_heat_demand*scl,"name":"Space Heat","color":0},
+          {"kwhd":total_water_heat_demand*scl,"name":"Water Heat","color":0},
           {"kwhd":(total_EV_demand+total_elec_trains_demand)*scl,"name":"Electric Transport","color":0},
           {"kwhd":total_hydrogen_for_hydrogen_vehicles*scl,"name":"Hydrogen Transport","color":0},
-          {"kwhd":transport_CH4_demand,"name":"Methane Transport","color":0},
-          {"kwhd":transport_biofuels_demand,"name":"Biofuel Transport","color":0},
-          {"kwhd":transport_kerosene_demand,"name":"Aviation","color":0},
+          {"kwhd":10000*transport_CH4_demand*scl,"name":"Methane Transport","color":0},
+          {"kwhd":10000*transport_biofuels_demand*scl,"name":"Biofuel Transport","color":0},
+          {"kwhd":10000*transport_kerosene_demand*scl,"name":"Aviation","color":0},
           // Industry
           {"kwhd":total_industrial_elec_demand*scl,"name":"Industry Electric","color":0},
           {"kwhd":total_industrial_methane_demand*scl,"name":"Industry Methane","color":0},
           {"kwhd":total_industrial_biomass_demand*scl,"name":"Industry Biomas","color":0},
-          {"kwhd":industrial_biofuel,"name":"Industry Biofuel","color":0},/*
+          {"kwhd":10000*industrial_biofuel*scl,"name":"Industry Biofuel","color":0},/*
           {"kwhd":total_industry_solid/3650,"name":"Industry Biomass","color":0},
           // Backup, liquid and gas processes*/
           {"kwhd":total_grid_losses*scl,"name":"Grid losses","color":2},
