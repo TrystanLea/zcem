@@ -132,6 +132,15 @@ ul li a {
     text-decoration: none;
 }
 
+ul li b {
+    padding: 10px 0px;
+    width:200px;
+    display: block;
+    float:left;
+    color:#888;
+    text-decoration: none;
+}
+
 ul li a:hover {
     text-decoration: none;
     color: var(--app-color);
