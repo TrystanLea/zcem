@@ -119,18 +119,16 @@ function fullzcb2_init()
     // Industrial & cooking
     // ---------------------------------------------
     annual_cooking_elec = 27.32
-    annual_cooking_biogas = 0.0
-    annual_cooking_biomass = 0.0
-                
-    annual_high_temp_process_elec = 12.90
-    annual_high_temp_process_biogas = 36.11
-    annual_high_temp_process_biomass = 0.0
-        
-    annual_low_temp_dry_sep_elec = 78.52
-    annual_low_temp_dry_sep_biogas = 13.09
-    annual_low_temp_dry_sep_biomass = 0.0
-    annual_low_temp_dry_sep_biogas_CHP = 0.0
-    annual_low_temp_dry_sep_biomass_CHP = 26.17
+    annual_high_temp_process = 49.01          // 26.3% elec, 73.7% gas in original model
+    annual_low_temp_dry_sep = 117.78          // 66% elec, 11% gas, 22% biomass CHP in original model
+
+    high_temp_process_fixed_elec_prc = 0.125
+    high_temp_process_fixed_gas_prc = 0.375
+    high_temp_process_DSR_prc = 0.5
+
+    low_temp_process_fixed_elec_prc = 0.333
+    low_temp_process_fixed_gas_prc = 0.167
+    low_temp_process_DSR_prc = 0.5
             
     annual_non_heat_process_elec = 88.00
     annual_non_heat_process_biogas = 13.44
@@ -155,7 +153,7 @@ function fullzcb2_init()
     transport_kerosene_demand = 40.32
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
-    biomass_for_biogas = 50.0 //94.0
+    biomass_for_biogas = 94.0 //94.0
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
@@ -584,18 +582,8 @@ function fullzcb2_run()
     daily_transport_liquid_demand = transport_bioliquid_demand * 1000.0 / 365.25
 
     daily_cooking_elec = annual_cooking_elec * 1000.0 / 365.25
-    daily_cooking_biogas = annual_cooking_biogas * 1000.0 / 365.25
-    daily_cooking_biomass = annual_cooking_biogas * 1000.0 / 365.25
-        
-    daily_high_temp_process_elec = annual_high_temp_process_elec * 1000.0 / 365.25
-    daily_high_temp_process_biogas = annual_high_temp_process_biogas * 1000.0 / 365.25
-    daily_high_temp_process_biomass = annual_high_temp_process_biomass * 1000.0 / 365.25
-
-    daily_low_temp_dry_sep_elec = annual_low_temp_dry_sep_elec * 1000.0 / 365.25
-    daily_low_temp_dry_sep_biogas = annual_low_temp_dry_sep_biogas * 1000.0 / 365.25
-    daily_low_temp_dry_sep_biomass = annual_low_temp_dry_sep_biomass * 1000.0 / 365.25
-    daily_low_temp_dry_sep_biogas_CHP = annual_low_temp_dry_sep_biogas_CHP * 1000.0 / 365.25
-    daily_low_temp_dry_sep_biomass_CHP = annual_low_temp_dry_sep_biomass_CHP * 1000.0 / 365.25
+    daily_high_temp_process = annual_high_temp_process * 1000.0 / 365.25
+    daily_low_temp_dry_sep = annual_low_temp_dry_sep * 1000.0 / 365.25
           
     daily_non_heat_process_elec = annual_non_heat_process_elec * 1000.0 / 365.25
     daily_non_heat_process_biogas = annual_non_heat_process_biogas * 1000.0 / 365.25
@@ -886,36 +874,36 @@ function fullzcb2_run()
         // balance including non DSR industrial load
         balance = data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s3_spacewater_elec_demand[hour] - cooking_elec - non_heat_process_elec
 
-        // industry elec heat demand
-        high_temp_process_elec = high_temp_process_profile[hour%24] * daily_high_temp_process_elec
-        low_temp_process_elec = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_elec
-        heat_process_elec = high_temp_process_elec + low_temp_process_elec
+        // High temp process: 25% elec, 75% gas in original model
+        // Low temp process: 66% elec, 11% gas, 22% biomass CHP in original model
         
-        // industry biogas heat demand
-        high_temp_process_biogas = high_temp_process_profile[hour%24] * daily_high_temp_process_biogas
-        low_temp_process_biogas = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biogas
-        heat_process_biogas = high_temp_process_biogas + low_temp_process_biogas
+        // Here we implement a mixed fixed elec/gas heat supply and an extended DSR elec/gas supply
+        // The DSR supply uses electricity when there is excess renewable supply available and gas 
+        // originally produced from excess renewable supply when direct supply is not sufficient
+                
+        // industry heat demand
+        high_temp_process = high_temp_process_profile[hour%24] * daily_high_temp_process
+        low_temp_process = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep
         
-        // combined heat process demand
-        heat_process = heat_process_elec + heat_process_biogas
+        heat_process_fixed_elec = (high_temp_process*high_temp_process_fixed_elec_prc) + (low_temp_process*low_temp_process_fixed_elec_prc)
+        heat_process_fixed_gas = (high_temp_process*high_temp_process_fixed_gas_prc) + (low_temp_process*low_temp_process_fixed_gas_prc)
+        heat_process_DSR = (high_temp_process*high_temp_process_DSR_prc) + (low_temp_process*low_temp_process_DSR_prc)
         
-        // DSR
-        heat_process_tmp = heat_process
-        if (heat_process>balance) heat_process = balance
-        if (heat_process<0) heat_process = 0
-        heat_process_shortfall = heat_process_tmp - heat_process
+        // Industrial DSR
+        heat_process_DSR_elec = heat_process_DSR                                    // 1. provide all heat demand with direct elec resistance heaters
+        if (heat_process_DSR_elec>balance) heat_process_DSR_elec = balance              // 2. limited to available electricity balance
+        if (heat_process_DSR_elec<0) heat_process_DSR_elec = 0                      // 3. -- should never happen --
+        heat_process_DSR_gas = heat_process_DSR - heat_process_DSR_elec                     // 4. if there is not enough elec to meet demand, use gas
         
-        industrial_elec_demand = cooking_elec + non_heat_process_elec + heat_process
+        industrial_elec_demand = cooking_elec + non_heat_process_elec + heat_process_fixed_elec + heat_process_DSR_elec
         
         s1_industrial_elec_demand.push(industrial_elec_demand)
         total_industrial_elec_demand += industrial_elec_demand 
         data.industry_elec.push([time,industrial_elec_demand])
         
         // methane demand
-        cooking_biogas = cooking_profile[hour%24] * daily_cooking_biogas
         non_heat_process_biogas = not_heat_process_profile[hour%24] * daily_non_heat_process_biogas
-        low_temp_process_biogas_CHP = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biogas_CHP
-        industrial_methane_demand = cooking_biogas + non_heat_process_biogas + low_temp_process_biogas_CHP + heat_process_shortfall
+        industrial_methane_demand = non_heat_process_biogas + heat_process_fixed_gas + heat_process_DSR_gas
         
         s1_methane_for_industry.push(industrial_methane_demand)
         total_industrial_methane_demand += industrial_methane_demand
@@ -1211,21 +1199,13 @@ function fullzcb2_run()
         // ------------------------------------------------------------------------------------
         // Biomass  
         
-        // Industrial & cooking demand
-        cooking_biomass = cooking_profile[hour%24] * daily_cooking_biomass
-        high_temp_process_biomass = high_temp_process_profile[hour%24] * daily_high_temp_process_biomass
-        low_temp_process_biomass = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass
+        // Not heat biomass demand ??
         non_heat_process_biomass = not_heat_process_profile[hour%24] * daily_non_heat_process_biomass
-        industrial_biomass_demand = cooking_biomass + high_temp_process_biomass + low_temp_process_biomass + non_heat_process_biomass
-        
-        low_temp_process_biomass_CHP = low_temp_process_profile[hour%24] * daily_low_temp_dry_sep_biomass_CHP
-        industrial_biomass_demand += low_temp_process_biomass_CHP
-        
-        total_industrial_biomass_demand += industrial_biomass_demand
+        total_industrial_biomass_demand += non_heat_process_biomass
         
         biomass_used = 0
         biomass_used += methane_from_biogas / anaerobic_digestion_efficiency 
-        biomass_used += industrial_biomass_demand
+        biomass_used += non_heat_process_biomass
         biomass_used += hourly_biomass_for_biofuel
         biomass_used += s3_biomass_for_spacewaterheat[hour] 
         
