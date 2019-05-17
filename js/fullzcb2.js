@@ -48,17 +48,17 @@ function fullzcb2_init()
     // ---------------------------------------------------------------------------
     // dataset index:
     // 0:onshore wind, 1:offshore wind, 2:wave, 3:tidal, 4:solar, 5:traditional electricity
-    offshore_wind_capacity = 140.0
+    offshore_wind_capacity = 150.0
     onshore_wind_capacity = 20.0
     wave_capacity = 10.0
     tidal_capacity = 20.0
     hydro_capacity = 3.0
-    solarpv_capacity = 70.0
+    solarpv_capacity = 90.0
     solarthermal_capacity = 30.0
     geothermal_elec_capacity = 3.0
     geothermal_heat_capacity = 2.0
     nuclear_capacity = 0.0
-    grid_loss_prc = 0.0
+    grid_loss_prc = 0.07
     
     // Availability factors
     offshore_wind_availability = 0.9
