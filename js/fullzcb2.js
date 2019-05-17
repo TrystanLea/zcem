@@ -627,8 +627,8 @@ function fullzcb2_run()
     }
     
     // move to hourly model if needed
-    heatpump_COP_hourly = heatpump_COP
-    GWth_GWe = (heatpump_COP_hourly * spacewater_share_heatpumps) + (elres_efficiency * spacewater_share_elres) + (methane_boiler_efficiency * spacewater_share_methane)
+    // heatpump_COP_hourly = heatpump_COP
+    // GWth_GWe = (heatpump_COP_hourly * spacewater_share_heatpumps) + (elres_efficiency * spacewater_share_elres) + (methane_boiler_efficiency * spacewater_share_methane)
     
     var capacityfactors_all = [];
     for (var hour = 0; hour < hours; hour++) {
@@ -770,6 +770,8 @@ function fullzcb2_run()
     
     for (var hour = 0; hour < hours; hour++) {
         var time = datastarttime + (hour * 3600 * 1000);
+        var day = parseInt(Math.floor(hour / 24))
+        var temperature = parseFloat(temperaturelines[day].split(",")[1]);
         
         spacewater_balance = s1_spacewater_demand_before_heatstore[hour]
         data.spacewater_balance.push([time,spacewater_balance])  
@@ -825,6 +827,9 @@ function fullzcb2_run()
         elres_elec_demand = heat_from_elres / elres_efficiency
         
         // heatpumps
+        heatpump_COP = 1.8+(temperature+15.0)*0.05
+        if (temperature<-15.0) heatpump_COP = 1.8
+                
         heat_from_heatpumps = spacewater_demand_after_heatstore * spacewater_share_heatpumps
         heatpump_elec_demand = heat_from_heatpumps / heatpump_COP
         ambient_heat_used = heat_from_heatpumps * (1.0-1.0/heatpump_COP)
