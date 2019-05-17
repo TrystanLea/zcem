@@ -564,51 +564,55 @@ table td {
           <th>Total</th>
         </tr>-->
         <tr>
-            <td>Cooking/catering</td>
-            <td><input class="modelinput" key="annual_cooking_elec" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td>Cooking/catering electricity</td>
+            <td><input class="modelinput" key="annual_cooking_elec" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
             <td></td>
             <td></td>
             <td></td>
             <td></td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Process Energy</th>
+          <th>Fixed Elec</th>
+          <th>Fixed Gas</th>
+          <th>Fixed Biomass</th>
+          <th>DSR</th>
         </tr>
         <tr>
             <td>High temp process</td>
-            <td><input class="modelinput" key="annual_high_temp_process" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="high_temp_process_fixed_elec_prc" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="high_temp_process_fixed_gas_prc" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="high_temp_process_DSR_prc" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_high_temp_process" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
+            <td><input class="modelinput" key="high_temp_process_fixed_elec_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
+            <td><input class="modelinput" key="high_temp_process_fixed_gas_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
+            <td><input class="modelinput" key="high_temp_process_fixed_biomass_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
+            <td><input class="modelinput" key="high_temp_process_DSR_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
         </tr>
         <tr>
             <td>Low temp drying & separation</td>
-            <td><input class="modelinput" key="annual_low_temp_dry_sep" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="low_temp_process_fixed_elec_prc" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="low_temp_process_fixed_gas_prc" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="low_temp_process_DSR_prc" type="text" style="width:70px" value="" autocomplete="off" /></td>
+            <td><input class="modelinput" key="annual_low_temp_dry_sep" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
+            <td><input class="modelinput" key="low_temp_process_fixed_elec_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
+            <td><input class="modelinput" key="low_temp_process_fixed_gas_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
+            <td><input class="modelinput" key="low_temp_process_fixed_biomass_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
+            <td><input class="modelinput" key="low_temp_process_DSR_prc" type="text" style="width:70px" value="" autocomplete="off" /> %</td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Elec</th>
+          <th>Gas</th>
+          <th>Biomass</th>
+          <th>Biofuel</th>
+          <th></th>
         </tr>
         <tr>
             <td>Non heat process</td>
-            <td><input class="modelinput" key="annual_non_heat_process_elec" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="annual_non_heat_process_biogas" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td><input class="modelinput" key="annual_non_heat_process_biomass" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td>Industrial biofuel</td>
-            <td><input class="modelinput" key="industrial_biofuel" type="text" style="width:70px" value="" autocomplete="off" /></td>
-            <td></td>
-            <td></td>
-            <td></td>
+            <td><input class="modelinput" key="annual_non_heat_process_elec" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
+            <td><input class="modelinput" key="annual_non_heat_process_biogas" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
+            <td><input class="modelinput" key="annual_non_heat_process_biomass" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
+            <td><input class="modelinput" key="industrial_biofuel" type="text" style="width:70px" value="" autocomplete="off" /> TWh</td>
             <td></td>
         </tr>
         </table>
+        <p><i>High and low temp DSR implements a substitutable heat source, direct electricity is used when excess renewable energy is available, synthetic gas is used when direct electricity supply is not sufficient.</i></p>
     </div>
 </div>
 

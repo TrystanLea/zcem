@@ -124,11 +124,13 @@ function fullzcb2_init()
 
     high_temp_process_fixed_elec_prc = 0.125
     high_temp_process_fixed_gas_prc = 0.375
+    high_temp_process_fixed_biomass_prc = 0.0
     high_temp_process_DSR_prc = 0.5
 
-    low_temp_process_fixed_elec_prc = 0.333
-    low_temp_process_fixed_gas_prc = 0.167
-    low_temp_process_DSR_prc = 0.5
+    low_temp_process_fixed_elec_prc = 0.3
+    low_temp_process_fixed_gas_prc = 0.1
+    low_temp_process_fixed_biomass_prc = 0.2
+    low_temp_process_DSR_prc = 0.4
             
     annual_non_heat_process_elec = 88.00
     annual_non_heat_process_biogas = 13.44
@@ -153,7 +155,7 @@ function fullzcb2_init()
     transport_kerosene_demand = 40.32
     
     biomass_for_biofuel = (transport_biofuels_demand + transport_kerosene_demand + industrial_biofuel)*1.3 // 143.0
-    biomass_for_biogas = 94.0 //94.0
+    biomass_for_biogas = 74.0 //94.0
     
     FT_process_biomass_req = 1.3   // GWh/GWh fuel
     FT_process_hydrogen_req = 0.61 // GWh/GWh fuel
@@ -167,14 +169,14 @@ function fullzcb2_init()
     // Hydrogen
     electrolysis_cap = 25.0
     electrolysis_eff = 0.8
-    hydrogen_storage_cap = 20000.0
+    hydrogen_storage_cap = 25000.0
     minimum_hydrogen_store_level = 0.0
     
     // Methanation
     methanation_capacity = 5.0
     methanation_efficiency = 0.8
     methanation_raw_biogas_to_H2_ratio = 1.2
-    methane_store_capacity = 70000.0
+    methane_store_capacity = 80000.0
     
     anaerobic_digestion_efficiency = 0.5747
     
@@ -764,7 +766,6 @@ function fullzcb2_run()
     s3_heatstore_SOC = []
     s3_balance_before_BEV_storage = []
     s3_spacewater_elec_demand = []
-    s3_biomass_for_spacewaterheat = []
     s3_methane_for_spacewaterheat = []
     
     for (var hour = 0; hour < hours; hour++) {
@@ -832,7 +833,7 @@ function fullzcb2_run()
         // biomass heat
         heat_from_biomass = spacewater_demand_after_heatstore * spacewater_share_biomass
         biomass_for_spacewaterheat = heat_from_biomass / biomass_efficiency
-        s3_biomass_for_spacewaterheat.push(biomass_for_spacewaterheat)
+        total_biomass_used += biomass_for_spacewaterheat
         total_biomass_for_spacewaterheat_loss += biomass_for_spacewaterheat - heat_from_biomass
         
         // methane/gas boiler heat
@@ -887,6 +888,7 @@ function fullzcb2_run()
         
         heat_process_fixed_elec = (high_temp_process*high_temp_process_fixed_elec_prc) + (low_temp_process*low_temp_process_fixed_elec_prc)
         heat_process_fixed_gas = (high_temp_process*high_temp_process_fixed_gas_prc) + (low_temp_process*low_temp_process_fixed_gas_prc)
+        heat_process_fixed_biomass = (high_temp_process*high_temp_process_fixed_biomass_prc) + (low_temp_process*low_temp_process_fixed_biomass_prc)
         heat_process_DSR = (high_temp_process*high_temp_process_DSR_prc) + (low_temp_process*low_temp_process_DSR_prc)
         
         // Industrial DSR
@@ -910,6 +912,15 @@ function fullzcb2_run()
         
         // Balance calculation for BEV storage stage
         s3_balance_before_BEV_storage.push(data.s1_total_variable_supply[hour][1] - data.s1_traditional_elec_demand[hour][1] - s3_spacewater_elec_demand[hour] - industrial_elec_demand)
+        
+        // Not heat biomass demand
+        non_heat_process_biomass = not_heat_process_profile[hour%24] * daily_non_heat_process_biomass
+        
+        total_industrial_biomass_demand += non_heat_process_biomass
+        total_industrial_biomass_demand += heat_process_fixed_biomass
+        
+        total_biomass_used += non_heat_process_biomass
+        total_biomass_used += heat_process_fixed_biomass
     }
     
     // -------------------------------------------------------------------------------------
@@ -1197,20 +1208,9 @@ function fullzcb2_run()
         total_synth_fuel_demand += synth_fuel_demand
         
         // ------------------------------------------------------------------------------------
-        // Biomass  
-        
-        // Not heat biomass demand ??
-        non_heat_process_biomass = not_heat_process_profile[hour%24] * daily_non_heat_process_biomass
-        total_industrial_biomass_demand += non_heat_process_biomass
-        
-        biomass_used = 0
-        biomass_used += methane_from_biogas / anaerobic_digestion_efficiency 
-        biomass_used += non_heat_process_biomass
-        biomass_used += hourly_biomass_for_biofuel
-        biomass_used += s3_biomass_for_spacewaterheat[hour] 
-        
-        total_biomass_used += biomass_used
-        
+        // Biomass
+        total_biomass_used += methane_from_biogas / anaerobic_digestion_efficiency 
+        total_biomass_used += hourly_biomass_for_biofuel
     }
     loading_prc(80,"model stage 5");
 
